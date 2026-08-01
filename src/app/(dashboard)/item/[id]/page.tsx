@@ -1,0 +1,1 @@
+//src/app/(dashboard)/item/[id]/page.tsx

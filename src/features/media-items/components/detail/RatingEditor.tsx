@@ -1,0 +1,1 @@
+//src/features/media-items/components/detail/RatingEditor.tsx
