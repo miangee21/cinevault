@@ -34,7 +34,7 @@ export function MovieDurationField() {
           type="number"
           min={0}
           placeholder="Hours"
-          defaultValue={totalHours}
+          value={totalHours ?? ""}
           onChange={(e) =>
             setTotalDuration(Number(e.target.value) || 0, totalMinutes ?? 0)
           }
@@ -45,7 +45,7 @@ export function MovieDurationField() {
           min={0}
           max={59}
           placeholder="Minutes"
-          defaultValue={totalMinutes}
+          value={totalMinutes ?? ""}
           onChange={(e) =>
             setTotalDuration(totalHours ?? 0, Number(e.target.value) || 0)
           }
@@ -102,7 +102,7 @@ export function MovieProgressField() {
               type="number"
               min={0}
               placeholder="Hours"
-              defaultValue={progressHours}
+              value={progressHours ?? ""}
               onChange={(e) =>
                 setProgressDuration(
                   Number(e.target.value) || 0,
@@ -116,14 +116,14 @@ export function MovieProgressField() {
               min={0}
               max={59}
               placeholder="Minutes"
-              defaultValue={progressMinutes}
+              value={progressMinutes ?? ""}
               onChange={(e) =>
                 setProgressDuration(
                   progressHours ?? 0,
                   Number(e.target.value) || 0,
                 )
               }
-              className="h-9 w-20 rounded-full px-3"
+              className="h-9 w-24 rounded-full px-3"
             />
           </div>
         </div>

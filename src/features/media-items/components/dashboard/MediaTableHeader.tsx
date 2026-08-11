@@ -14,11 +14,15 @@ const COLUMNS: { key: ColumnKey; label: string; resizable: boolean }[] = [
   { key: "rating", label: "Rating", resizable: false },
 ];
 
+interface MediaTableHeaderProps {
+  onResize: (key: ColumnKey, deltaX: number) => void;
+  showActionsColumn: boolean;
+}
+
 export function MediaTableHeader({
   onResize,
-}: {
-  onResize: (key: ColumnKey, deltaX: number) => void;
-}) {
+  showActionsColumn,
+}: MediaTableHeaderProps) {
   return (
     <TableHeader>
       <TableRow className="hover:bg-transparent">
@@ -32,6 +36,9 @@ export function MediaTableHeader({
             )}
           </TableHead>
         ))}
+        {showActionsColumn && (
+          <TableHead className="w-24 text-center">Actions</TableHead>
+        )}
       </TableRow>
     </TableHeader>
   );

@@ -17,6 +17,7 @@ import { MediaItemFormDialog } from "../form/MediaItemFormDialog";
 
 import { useMediaItems } from "../../hooks/useMediaItems";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
+import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
 import { sortMediaItems, type SortOption } from "../../utils/sortMediaItems";
 import { type Id } from "@convex/_generated/dataModel";
 
@@ -29,6 +30,7 @@ export function MediaTable() {
   const [pageSize, setPageSize] = useState<PageSize>("20");
   const [currentPage, setCurrentPage] = useState(1);
   const { widths, resizeColumn } = useColumnWidths();
+  const { showDeleteButton } = useDashboardPreferences();
 
   const { items, status, loadMore } = useMediaItems(
     categoryFilter === "all" ? undefined : categoryFilter,
@@ -133,11 +135,20 @@ export function MediaTable() {
                 <col style={{ width: widths.storage }} />
                 <col style={{ width: widths.status }} />
                 <col style={{ width: widths.rating }} />
+                {showDeleteButton && <col style={{ width: 48 }} />}
               </colgroup>
-              <MediaTableHeader onResize={resizeColumn} />
+              <MediaTableHeader
+                onResize={resizeColumn}
+                showActionsColumn={showDeleteButton}
+              />
               <TableBody>
                 {pageItems.map((item, index) => (
-                  <MediaTableRow key={item._id} item={item} index={index} />
+                  <MediaTableRow
+                    key={item._id}
+                    item={item}
+                    index={index}
+                    showDeleteButton={showDeleteButton}
+                  />
                 ))}
               </TableBody>
             </Table>

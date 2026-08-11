@@ -2,6 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAction } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -108,6 +110,10 @@ export function MediaItemFormDialog({
   const [open, setOpen] = useState(false);
   const createMediaItem = useCreateMediaItem();
   const updateMediaItem = useUpdateMediaItem();
+  const generateUploadSignature = useAction(
+    api.cloudinary.generateUploadSignature,
+  );
+  const deleteCloudinaryImage = useAction(api.cloudinary.deleteCloudinaryImage);
 
   const form = useForm<MediaItemFormValues>({
     resolver: zodResolver(mediaItemFormSchema),
@@ -124,12 +130,28 @@ export function MediaItemFormDialog({
   } = form;
 
   useEffect(() => {
-    if (open) reset(buildDefaultValues(item));
+    if (open) {
+      reset(buildDefaultValues(item));
+      setPosterFile(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const kind = watch("kind");
   const posterUrl = watch("posterUrl");
+  const title = watch("title");
+  const categoryId = watch("categoryId");
+  const hasHard = watch("hasHard");
+  const hasCloud = watch("hasCloud");
+  const rating = watch("rating");
+
+  const isFormValid =
+    !!posterUrl &&
+    !!title?.trim() &&
+    !!categoryId &&
+    (hasHard || hasCloud) &&
+    !!rating;
+  const [posterFile, setPosterFile] = useState<File | null>(null);
 
   const handleKindChange = (nextKind: string) => {
     if (nextKind !== "movie" && nextKind !== "series") return;
@@ -141,13 +163,45 @@ export function MediaItemFormDialog({
 
   const onSubmit = async (values: MediaItemFormValues) => {
     try {
+      let uploadedPosterUrl = values.posterUrl;
+      let uploadedPosterPublicId = values.posterPublicId;
+
+      if (posterFile) {
+        const { signature, timestamp, folder, apiKey, cloudName } =
+          await generateUploadSignature({});
+
+        const formData = new FormData();
+        formData.append("file", posterFile);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", String(timestamp));
+        formData.append("signature", signature);
+        formData.append("folder", folder);
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Poster upload failed");
+        }
+
+        const data = await response.json();
+
+        uploadedPosterUrl = data.secure_url;
+        uploadedPosterPublicId = data.public_id;
+      }
+
       const payload = {
         categoryId: values.categoryId as any,
         subcategoryIds: values.subcategoryIds as any,
         title: values.title,
         kind: values.kind,
-        posterUrl: values.posterUrl,
-        posterPublicId: values.posterPublicId,
+        posterUrl: uploadedPosterUrl,
+        posterPublicId: uploadedPosterPublicId,
         status: values.status,
         hasHard: values.hasHard,
         hardDescription: values.hardDescription,
@@ -180,6 +234,16 @@ export function MediaItemFormDialog({
         );
       } else if (item) {
         await updateMediaItem({ id: item._id, ...payload });
+
+        if (
+          item.posterPublicId &&
+          item.posterPublicId !== uploadedPosterPublicId
+        ) {
+          await deleteCloudinaryImage({
+            publicId: item.posterPublicId,
+          });
+        }
+
         toast.success("Changes saved");
       }
       setOpen(false);
@@ -205,13 +269,18 @@ export function MediaItemFormDialog({
               <div className="flex items-start gap-4">
                 <PosterUploadField
                   posterUrl={posterUrl}
-                  onChange={(result) => {
-                    setValue("posterUrl", result?.posterUrl, {
-                      shouldValidate: true,
-                    });
-                    setValue("posterPublicId", result?.posterPublicId, {
-                      shouldValidate: true,
-                    });
+                  onChange={(file) => {
+                    setPosterFile(file);
+
+                    if (file) {
+                      setValue("posterUrl", URL.createObjectURL(file), {
+                        shouldValidate: true,
+                      });
+                      setValue("posterPublicId", undefined);
+                    } else {
+                      setValue("posterUrl", undefined);
+                      setValue("posterPublicId", undefined);
+                    }
                   }}
                 />
 
@@ -290,8 +359,8 @@ export function MediaItemFormDialog({
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:opacity-60"
+                disabled={isSubmitting || !isFormValid}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <Loader2 className="size-4 animate-spin" />

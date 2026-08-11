@@ -2,7 +2,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Film, Tv } from "lucide-react";
+import { Film, Tv, Trash2, Pencil } from "lucide-react";
+import { DeleteItemDialog } from "../detail/DeleteItemDialog";
+import { MediaItemFormDialog } from "../form/MediaItemFormDialog";
 import { TableRow, TableCell } from "@/shared/components/ui/table";
 import {
   Tooltip,
@@ -18,15 +20,23 @@ import { type MediaItem } from "../../types";
 interface MediaTableRowProps {
   item: MediaItem;
   index: number;
+  showDeleteButton: boolean;
 }
 
-export function MediaTableRow({ item, index }: MediaTableRowProps) {
+export function MediaTableRow({
+  item,
+  index,
+  showDeleteButton,
+}: MediaTableRowProps) {
   const router = useRouter();
   const isOdd = index % 2 === 1;
 
   return (
     <TableRow
-      onClick={() => router.push(`/item/${item._id}`)}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        router.push(`/item/${item._id}`);
+      }}
       className={cn(
         "cursor-pointer transition-colors hover:bg-accent/50",
         isOdd && "bg-[hsl(var(--foreground)/0.075)]",
@@ -113,6 +123,45 @@ export function MediaTableRow({ item, index }: MediaTableRowProps) {
           />
         )}
       </TableCell>
+
+      {showDeleteButton && (
+        <TableCell>
+          <div className="flex items-center justify-center gap-1">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <MediaItemFormDialog
+                mode="edit"
+                item={item}
+                trigger={
+                  <button
+                    type="button"
+                    className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.08)] hover:text-foreground"
+                    aria-label={`Edit ${item.title}`}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                }
+              />
+            </div>
+
+            <DeleteItemDialog
+              itemId={item._id}
+              title={item.title}
+              trigger={
+                <button
+                  type="button"
+                  className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[hsl(var(--destructive)/0.1)] hover:text-destructive"
+                  aria-label={`Delete ${item.title}`}
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              }
+            />
+          </div>
+        </TableCell>
+      )}
     </TableRow>
   );
 }

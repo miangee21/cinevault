@@ -10,6 +10,7 @@ import {
   FolderTree,
   LogOut,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -19,6 +20,13 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { ThemeToggle } from "@/features/theme/components/ThemeToggle";
+import { Switch } from "@/shared/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/shared/components/ui/popover";
+import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import { cn } from "@/shared/lib/utils";
@@ -37,6 +45,7 @@ export function Navbar() {
   const pathname = usePathname();
   const { signOut } = useAuthActions();
   const { user, isLoading } = useCurrentUser();
+  const { showDeleteButton, setShowDeleteButton } = useDashboardPreferences();
 
   const handleLogout = async () => {
     await signOut();
@@ -75,6 +84,35 @@ export function Navbar() {
       </nav>
 
       <div className="flex items-center justify-end gap-2">
+        <Popover>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.06)] hover:text-foreground"
+                aria-label="Dashboard settings"
+              >
+                <Settings className="size-4" />
+              </button>
+            }
+          />
+          <PopoverContent align="end" className="w-64">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Action buttons
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Show on dashboard rows
+                </p>
+              </div>
+              <Switch
+                checked={showDeleteButton}
+                onCheckedChange={setShowDeleteButton}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
         <ThemeToggle />
 
         <DropdownMenu>
