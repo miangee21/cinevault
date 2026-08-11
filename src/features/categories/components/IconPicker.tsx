@@ -43,7 +43,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         render={
           <button
             type="button"
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--foreground)/0.04)] text-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.08)]"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-[hsl(var(--foreground)/0.04)] text-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.08)]"
             aria-label="Choose an icon"
           >
             <IconGlyph name={value} className="size-5" />
@@ -78,8 +78,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 className={cn(
                   "flex aspect-square items-center justify-center rounded-xl border transition-colors",
                   isSelected
-                    ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]"
-                    : "border-[hsl(var(--border))] text-muted-foreground hover:border-[hsl(var(--primary)/0.4)] hover:text-foreground",
+                    ? "border-primary bg-[hsl(var(--primary)/0.12)] text-primary"
+                    : "border-border text-muted-foreground hover:border-[hsl(var(--primary)/0.4)] hover:text-foreground",
                 )}
                 aria-label={icon}
               >

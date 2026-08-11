@@ -7,10 +7,12 @@ export default function LoginPage() {
   return (
     <div className="rounded-2xl border border-[hsl(var(--foreground)/0.1)] bg-[hsl(var(--foreground)/0.04)] px-8 py-8 backdrop-blur-2xl">
       <div className="mb-5 text-center">
-        <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))]">
+        <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.15)] text-primary">
           <Clapperboard className="size-5" />
         </div>
-        <h1 className="font-display text-xl font-semibold text-foreground">Welcome back</h1>
+        <h1 className="font-display text-xl font-semibold text-foreground">
+          Welcome back
+        </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Log in to pick up where you left off.
         </p>
@@ -22,7 +24,10 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-medium text-[hsl(var(--primary))] hover:underline">
+        <Link
+          href="/signup"
+          className="font-medium text-primary hover:underline"
+        >
           Sign up
         </Link>
       </p>

@@ -35,7 +35,7 @@ export function SubcategoryList({ categoryId }: SubcategoryListProps) {
           trigger={
             <button
               type="button"
-              className="group flex items-center gap-1.5 rounded-full border border-[hsl(var(--border))] py-1.5 pl-3 pr-2.5 text-xs font-medium text-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)]"
+              className="group flex items-center gap-1.5 rounded-full border border-border py-1.5 pl-3 pr-2.5 text-xs font-medium text-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)]"
             >
               <IconGlyph
                 name={sub.icon}
@@ -54,7 +54,7 @@ export function SubcategoryList({ categoryId }: SubcategoryListProps) {
         trigger={
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-full border border-dashed border-[hsl(var(--border))] px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)] hover:text-[hsl(var(--primary))]"
+            className="flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)] hover:text-primary"
           >
             <Plus className="size-3.5" />
             Add

@@ -10,7 +10,9 @@
 
 import type * as auth from "../auth.js";
 import type * as categories from "../categories.js";
+import type * as cloudinary from "../cloudinary.js";
 import type * as http from "../http.js";
+import type * as mediaItems from "../mediaItems.js";
 import type * as subcategories from "../subcategories.js";
 import type * as users from "../users.js";
 
@@ -23,7 +25,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   categories: typeof categories;
+  cloudinary: typeof cloudinary;
   http: typeof http;
+  mediaItems: typeof mediaItems;
   subcategories: typeof subcategories;
   users: typeof users;
 }>;

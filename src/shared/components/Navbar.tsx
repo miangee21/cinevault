@@ -45,9 +45,9 @@ export function Navbar() {
   };
 
   return (
-    <header className="grid h-14 grid-cols-[1fr_auto_1fr] items-center border-b border-[hsl(var(--border))] bg-background px-6">
+    <header className="grid h-14 grid-cols-[1fr_auto_1fr] items-center border-b border-border bg-background px-6">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <Clapperboard className="size-5 text-[hsl(var(--primary))]" />
+        <Clapperboard className="size-5 text-primary" />
         <span className="font-display text-base font-semibold text-foreground">
           Cinevault
         </span>
@@ -63,7 +63,7 @@ export function Navbar() {
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))]"
+                  ? "bg-[hsl(var(--primary)/0.12)] text-primary"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -85,7 +85,7 @@ export function Navbar() {
                 className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-[hsl(var(--foreground)/0.06)]"
               >
                 <Avatar className="size-8 ring-2 ring-transparent transition-all">
-                  <AvatarFallback className="bg-linear-to-br from-[hsl(var(--primary)/0.25)] to-[hsl(var(--primary)/0.1)] text-sm font-semibold text-[hsl(var(--primary))]">
+                  <AvatarFallback className="bg-linear-to-br from-[hsl(var(--primary)/0.25)] to-[hsl(var(--primary)/0.1)] text-sm font-semibold text-primary">
                     {isLoading ? "" : getInitial(user?.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -100,7 +100,7 @@ export function Navbar() {
           >
             <div className="flex items-center gap-3 p-4">
               <Avatar className="size-11">
-                <AvatarFallback className="bg-linear-to-br from-[hsl(var(--primary)/0.3)] to-[hsl(var(--primary)/0.12)] text-base font-semibold text-[hsl(var(--primary))]">
+                <AvatarFallback className="bg-linear-to-br from-[hsl(var(--primary)/0.3)] to-[hsl(var(--primary)/0.12)] text-base font-semibold text-primary">
                   {isLoading ? "" : getInitial(user?.name)}
                 </AvatarFallback>
               </Avatar>
@@ -114,13 +114,13 @@ export function Navbar() {
               </div>
             </div>
 
-            <div className="h-px bg-[hsl(var(--border))]" />
+            <div className="h-px bg-border" />
 
             <div className="p-2">
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-[hsl(var(--destructive))] transition-colors hover:bg-[hsl(var(--destructive)/0.1)]"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-[hsl(var(--destructive)/0.1)]"
               >
                 <LogOut className="size-4" />
                 Log out

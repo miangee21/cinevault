@@ -10,7 +10,9 @@ export default function SignupPage() {
         <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
           <Clapperboard className="size-5" />
         </div>
-        <h1 className="font-display text-xl font-semibold text-foreground">Create your vault</h1>
+        <h1 className="font-display text-xl font-semibold text-foreground">
+          Create your vault
+        </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Track every movie and series you love.
         </p>
@@ -22,7 +24,10 @@ export default function SignupPage() {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-primary hover:underline"
+        >
           Log in
         </Link>
       </p>

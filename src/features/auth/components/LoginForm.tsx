@@ -92,7 +92,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[hsl(var(--primary))] text-sm font-semibold text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:pointer-events-none disabled:opacity-60"
+          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:pointer-events-none disabled:opacity-60"
         >
           {isSubmitting ? (
             <>

@@ -159,7 +159,7 @@ export function CategoryFormDialog({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[hsl(var(--primary))] text-sm font-semibold text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:opacity-60"
+                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:opacity-60"
                 >
                   {isSubmitting ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -171,7 +171,7 @@ export function CategoryFormDialog({
                   <button
                     type="button"
                     onClick={() => setDeleteAlertOpen(true)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--destructive)/0.4)] text-[hsl(var(--destructive))] transition-colors hover:bg-[hsl(var(--destructive)/0.08)]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--destructive)/0.4)] text-destructive transition-colors hover:bg-[hsl(var(--destructive)/0.08)]"
                     aria-label="Delete category"
                   >
                     <Trash2 className="size-4" />
@@ -202,7 +202,7 @@ export function CategoryFormDialog({
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                className="bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--destructive)/0.9)]"
+                className="bg-destructive text-destructive-foreground hover:bg-[hsl(var(--destructive)/0.9)]"
               >
                 Delete
               </AlertDialogAction>

@@ -20,7 +20,15 @@ export function ThemeToggle() {
       className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.06)] hover:text-foreground"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {mounted ? isDark ? <Sun className="size-4" /> : <Moon className="size-4" /> : <span className="size-4" />}
+      {mounted ? (
+        isDark ? (
+          <Sun className="size-4" />
+        ) : (
+          <Moon className="size-4" />
+        )
+      ) : (
+        <span className="size-4" />
+      )}
     </button>
   );
 }

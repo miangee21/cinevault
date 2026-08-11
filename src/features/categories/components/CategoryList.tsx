@@ -14,7 +14,7 @@ function AddCategoryButton({ label }: { label: string }) {
       trigger={
         <button
           type="button"
-          className="flex h-10 items-center gap-2 rounded-full bg-[hsl(var(--primary))] px-5 text-sm font-semibold text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--primary)/0.9)]"
+          className="flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)]"
         >
           <Plus className="size-4" />
           {label}

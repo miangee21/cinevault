@@ -8,7 +8,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2, User, Mail, Lock } from "lucide-react";
 
-import { Field, FieldGroup, FieldLabel, FieldError } from "@/shared/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldError,
+} from "@/shared/components/ui/field";
 import { AuthPillInput } from "./AuthPillInput";
 import { useAuthActions } from "../hooks/useAuthActions";
 import { signupSchema, type SignupFormValues } from "../types";
@@ -37,7 +42,9 @@ export function SignupForm() {
       router.push("/dashboard");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not create your account. Try again."
+        error instanceof Error
+          ? error.message
+          : "Could not create your account. Try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -48,7 +55,9 @@ export function SignupForm() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <FieldGroup className="gap-3">
         <Field data-invalid={!!errors.name}>
-          <FieldLabel htmlFor="name" className="sr-only">Name</FieldLabel>
+          <FieldLabel htmlFor="name" className="sr-only">
+            Name
+          </FieldLabel>
           <AuthPillInput
             id="name"
             icon={<User />}
@@ -62,7 +71,9 @@ export function SignupForm() {
         </Field>
 
         <Field data-invalid={!!errors.email}>
-          <FieldLabel htmlFor="email" className="sr-only">Email</FieldLabel>
+          <FieldLabel htmlFor="email" className="sr-only">
+            Email
+          </FieldLabel>
           <AuthPillInput
             id="email"
             type="email"
@@ -77,7 +88,9 @@ export function SignupForm() {
         </Field>
 
         <Field data-invalid={!!errors.password}>
-          <FieldLabel htmlFor="password" className="sr-only">Password</FieldLabel>
+          <FieldLabel htmlFor="password" className="sr-only">
+            Password
+          </FieldLabel>
           <AuthPillInput
             id="password"
             type="password"
@@ -88,13 +101,15 @@ export function SignupForm() {
             aria-invalid={!!errors.password}
             {...register("password")}
           />
-          {errors.password && <FieldError>{errors.password.message}</FieldError>}
+          {errors.password && (
+            <FieldError>{errors.password.message}</FieldError>
+          )}
         </Field>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[hsl(var(--primary))] text-sm font-semibold text-[hsl(var(--primary-foreground))] transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:pointer-events-none disabled:opacity-60"
+          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:pointer-events-none disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
