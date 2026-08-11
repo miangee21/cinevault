@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search as SearchIcon } from "lucide-react";
+import { Plus, Search as SearchIcon, List, Grid2X2 } from "lucide-react";
 import { Table, TableBody } from "@/shared/components/ui/table";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -13,6 +13,7 @@ import { SortDropdown } from "./SortDropdown";
 import { PaginationBar, type PageSize } from "./PaginationBar";
 import { MediaTableHeader } from "./MediaTableHeader";
 import { MediaTableRow } from "./MediaTableRow";
+import { MediaGridCard } from "./MediaGridCard";
 import { MediaItemFormDialog } from "../form/MediaItemFormDialog";
 
 import { useMediaItems } from "../../hooks/useMediaItems";
@@ -30,7 +31,7 @@ export function MediaTable() {
   const [pageSize, setPageSize] = useState<PageSize>("20");
   const [currentPage, setCurrentPage] = useState(1);
   const { widths, resizeColumn } = useColumnWidths();
-  const { showDeleteButton } = useDashboardPreferences();
+  const { showDeleteButton, viewMode, setViewMode } = useDashboardPreferences();
 
   const { items, status, loadMore } = useMediaItems(
     categoryFilter === "all" ? undefined : categoryFilter,
@@ -86,6 +87,37 @@ export function MediaTable() {
 
         <div className="flex items-center gap-2">
           <SearchBar onSearch={setSearchTerm} />
+
+          <div className="flex h-10 items-center rounded-full border border-border bg-[hsl(var(--foreground)/0.03)] p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`flex size-8 items-center justify-center rounded-full transition-all ${
+                viewMode === "list"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-label="List view"
+              title="List view"
+            >
+              <List className="size-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`flex size-8 items-center justify-center rounded-full transition-all ${
+                viewMode === "grid"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-label="Grid view"
+              title="Grid view"
+            >
+              <Grid2X2 className="size-4" />
+            </button>
+          </div>
+
           <SortDropdown value={sortOption} onChange={setSortOption} />
           <MediaItemFormDialog
             mode="create"
@@ -126,33 +158,47 @@ export function MediaTable() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-border">
-            <Table>
-              <colgroup>
-                <col style={{ width: widths.poster }} />
-                <col style={{ width: widths.title }} />
-                <col style={{ width: widths.type }} />
-                <col style={{ width: widths.storage }} />
-                <col style={{ width: widths.status }} />
-                <col style={{ width: widths.rating }} />
-                {showDeleteButton && <col style={{ width: 48 }} />}
-              </colgroup>
-              <MediaTableHeader
-                onResize={resizeColumn}
-                showActionsColumn={showDeleteButton}
-              />
-              <TableBody>
-                {pageItems.map((item, index) => (
-                  <MediaTableRow
-                    key={item._id}
-                    item={item}
-                    index={index}
-                    showDeleteButton={showDeleteButton}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {viewMode === "list" ? (
+            <div className="overflow-x-auto rounded-2xl border border-border">
+              <Table>
+                <colgroup>
+                  <col style={{ width: widths.poster }} />
+                  <col style={{ width: widths.title }} />
+                  <col style={{ width: widths.type }} />
+                  <col style={{ width: widths.storage }} />
+                  <col style={{ width: widths.status }} />
+                  <col style={{ width: widths.rating }} />
+                  {showDeleteButton && <col style={{ width: 48 }} />}
+                </colgroup>
+
+                <MediaTableHeader
+                  onResize={resizeColumn}
+                  showActionsColumn={showDeleteButton}
+                />
+
+                <TableBody>
+                  {pageItems.map((item, index) => (
+                    <MediaTableRow
+                      key={item._id}
+                      item={item}
+                      index={index}
+                      showDeleteButton={showDeleteButton}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
+              {pageItems.map((item) => (
+                <MediaGridCard
+                  key={item._id}
+                  item={item}
+                  showActionsButton={showDeleteButton}
+                />
+              ))}
+            </div>
+          )}
 
           <PaginationBar
             currentPage={currentPage}
