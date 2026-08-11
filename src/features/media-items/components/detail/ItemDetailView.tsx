@@ -28,16 +28,7 @@ export function ItemDetailView({ itemId }: { itemId: Id<"mediaItems"> }) {
   }
 
   if (!item) {
-    return (
-      <div className="flex min-h-[calc(100vh-57px)] flex-col items-center justify-center gap-2 text-center">
-        <p className="font-display text-xl font-semibold text-foreground">
-          Item not found
-        </p>
-        <p className="text-sm text-muted-foreground">
-          It may have been deleted, or you don&apos;t have access to it.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const category = categories.find((c) => c._id === item.categoryId);
