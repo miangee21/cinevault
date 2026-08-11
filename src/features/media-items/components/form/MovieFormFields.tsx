@@ -49,7 +49,7 @@ export function MovieDurationField() {
           onChange={(e) =>
             setTotalDuration(totalHours ?? 0, Number(e.target.value) || 0)
           }
-          className="h-10 w-24 rounded-full px-4"
+          className="h-10 w-26 rounded-full px-4"
         />
       </div>
     </div>

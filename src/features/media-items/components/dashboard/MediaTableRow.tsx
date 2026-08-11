@@ -29,7 +29,7 @@ export function MediaTableRow({ item, index }: MediaTableRowProps) {
       onClick={() => router.push(`/item/${item._id}`)}
       className={cn(
         "cursor-pointer transition-colors hover:bg-accent/50",
-        isOdd && "bg-[hsl(var(--foreground)/0.025)]",
+        isOdd && "bg-[hsl(var(--foreground)/0.075)]",
       )}
     >
       <TableCell>
