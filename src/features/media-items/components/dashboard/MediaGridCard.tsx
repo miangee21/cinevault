@@ -141,7 +141,7 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
               <TooltipTrigger
                 render={
                   <div className="flex size-7 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10">
-                    <HardDrive className="size-4 text-blue-500" />
+                    <HardDrive className="size-4 text-storage-hard" />
                   </div>
                 }
               />
@@ -156,7 +156,7 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
               <TooltipTrigger
                 render={
                   <div className="flex size-7 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10">
-                    <Cloud className="size-4 text-blue-500" />
+                    <Cloud className="size-4 text-storage-cloud" />
                   </div>
                 }
               />
