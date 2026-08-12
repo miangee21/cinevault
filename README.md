@@ -300,7 +300,6 @@ Visit your live URL, sign up a fresh account, create a category, add a movie or 
 Ideas that are explicitly out of scope for now, but natural next steps for anyone forking this:
 
 - [ ] Forgot-password flow (needs an email provider like Resend wired into Convex Auth)
-- [ ] Server-side sorting across the full dataset for very large libraries
 - [ ] Shareable/public read-only vault links
 
 ---

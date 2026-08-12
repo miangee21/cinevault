@@ -74,6 +74,12 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_category", ["userId", "categoryId"])
+    .index("by_user_and_title", ["userId", "title"])
+    .index("by_user_category_and_title", ["userId", "categoryId", "title"])
+    .index("by_user_and_rating", ["userId", "rating"])
+    .index("by_user_category_and_rating", ["userId", "categoryId", "rating"])
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_user_category_and_status", ["userId", "categoryId", "status"])
     .searchIndex("search_title", {
       searchField: "title",
       filterFields: ["userId"],

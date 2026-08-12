@@ -1,7 +1,7 @@
 //src/features/media-items/components/dashboard/MediaTable.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search as SearchIcon, List, Grid2X2 } from "lucide-react";
 import { Table, TableBody } from "@/shared/components/ui/table";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -19,7 +19,7 @@ import { MediaItemFormDialog } from "../form/MediaItemFormDialog";
 import { useMediaItems } from "../../hooks/useMediaItems";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
 import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
-import { sortMediaItems, type SortOption } from "../../utils/sortMediaItems";
+import { type SortOption } from "../../utils/sortMediaItems";
 import { type Id } from "@convex/_generated/dataModel";
 
 export function MediaTable() {
@@ -36,12 +36,11 @@ export function MediaTable() {
   const { items, status, loadMore } = useMediaItems(
     categoryFilter === "all" ? undefined : categoryFilter,
     searchTerm,
+    sortOption,
   );
 
-  const sortedItems = useMemo(
-    () => sortMediaItems(items, sortOption),
-    [items, sortOption],
-  );
+  // Items now arrive pre-sorted from Convex — no client-side sort needed.
+  const sortedItems = items;
   const isSearching = searchTerm.trim().length > 0;
   const isLoadingFirstPage = status === "LoadingFirstPage";
   const pageSizeNumber = pageSize === "all" ? undefined : Number(pageSize);

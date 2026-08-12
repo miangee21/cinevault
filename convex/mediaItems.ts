@@ -4,6 +4,21 @@ import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
+const sortOptionValidator = v.union(
+  v.literal("name_asc"),
+  v.literal("name_desc"),
+  v.literal("rating_asc"),
+  v.literal("rating_desc"),
+  v.literal("completed_first"),
+  v.literal("in_progress_first"),
+  v.literal("not_started_first"),
+);
+
+const STATUS_PRIORITY = {
+  completed_first: ["completed", "in_progress", "not_started"],
+  in_progress_first: ["in_progress", "completed", "not_started"],
+  not_started_first: ["not_started", "in_progress", "completed"],
+} as const;
 
 function validateRating(rating: number | undefined) {
   if (rating === undefined) return;
@@ -63,6 +78,7 @@ export const getMediaItemsPaginated = query({
   args: {
     categoryId: v.optional(v.id("categories")),
     searchTerm: v.optional(v.string()),
+    sortOption: sortOptionValidator,
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
@@ -71,7 +87,6 @@ export const getMediaItemsPaginated = query({
 
     const term = args.searchTerm?.trim();
     if (term && term.length > 0) {
-      // Search ignores the category tab on purpose — matches everywhere per the doc's requirement
       return await ctx.db
         .query("mediaItems")
         .withSearchIndex("search_title", (q) =>
@@ -80,19 +95,71 @@ export const getMediaItemsPaginated = query({
         .paginate(args.paginationOpts);
     }
 
-    if (args.categoryId) {
-      return await ctx.db
-        .query("mediaItems")
-        .withIndex("by_user_and_category", (q) =>
-          q.eq("userId", userId).eq("categoryId", args.categoryId!),
-        )
-        .paginate(args.paginationOpts);
+    if (args.sortOption === "name_asc" || args.sortOption === "name_desc") {
+      const order = args.sortOption === "name_asc" ? "asc" : "desc";
+      const baseQuery = args.categoryId
+        ? ctx.db
+            .query("mediaItems")
+            .withIndex("by_user_category_and_title", (q) =>
+              q.eq("userId", userId).eq("categoryId", args.categoryId!),
+            )
+        : ctx.db
+            .query("mediaItems")
+            .withIndex("by_user_and_title", (q) => q.eq("userId", userId));
+      return await baseQuery.order(order).paginate(args.paginationOpts);
     }
 
-    return await ctx.db
-      .query("mediaItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .paginate(args.paginationOpts);
+    if (args.sortOption === "rating_asc" || args.sortOption === "rating_desc") {
+      const order = args.sortOption === "rating_asc" ? "asc" : "desc";
+      const baseQuery = args.categoryId
+        ? ctx.db
+            .query("mediaItems")
+            .withIndex("by_user_category_and_rating", (q) =>
+              q.eq("userId", userId).eq("categoryId", args.categoryId!),
+            )
+        : ctx.db
+            .query("mediaItems")
+            .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
+      return await baseQuery.order(order).paginate(args.paginationOpts);
+    }
+
+    const priority = STATUS_PRIORITY[args.sortOption];
+
+    const groups = await Promise.all(
+      priority.map((status) => {
+        const baseQuery = args.categoryId
+          ? ctx.db
+              .query("mediaItems")
+              .withIndex("by_user_category_and_status", (q) =>
+                q
+                  .eq("userId", userId)
+                  .eq("categoryId", args.categoryId!)
+                  .eq("status", status),
+              )
+          : ctx.db
+              .query("mediaItems")
+              .withIndex("by_user_and_status", (q) =>
+                q.eq("userId", userId).eq("status", status),
+              );
+        return baseQuery.collect();
+      }),
+    );
+
+    const sorted = groups.flatMap((group) =>
+      [...group].sort((a, b) => a.title.localeCompare(b.title)),
+    );
+
+    const offset = args.paginationOpts.cursor
+      ? Number(args.paginationOpts.cursor)
+      : 0;
+    const page = sorted.slice(offset, offset + args.paginationOpts.numItems);
+    const nextOffset = offset + page.length;
+
+    return {
+      page,
+      isDone: nextOffset >= sorted.length,
+      continueCursor: String(nextOffset),
+    };
   },
 });
 
