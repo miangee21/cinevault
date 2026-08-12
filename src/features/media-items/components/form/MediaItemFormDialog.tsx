@@ -1,7 +1,7 @@
 //src/features/media-items/components/form/MediaItemFormDialog.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useForm, FormProvider } from "react-hook-form";
@@ -129,13 +129,26 @@ export function MediaItemFormDialog({
     formState: { errors, isSubmitting },
   } = form;
 
+  const posterBlobUrlRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (open) {
       reset(buildDefaultValues(item));
       setPosterFile(null);
+    } else if (posterBlobUrlRef.current) {
+      URL.revokeObjectURL(posterBlobUrlRef.current);
+      posterBlobUrlRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (posterBlobUrlRef.current) {
+        URL.revokeObjectURL(posterBlobUrlRef.current);
+      }
+    };
+  }, []);
 
   const kind = watch("kind");
   const posterUrl = watch("posterUrl");
@@ -146,11 +159,7 @@ export function MediaItemFormDialog({
   const rating = watch("rating");
 
   const isFormValid =
-    !!posterUrl &&
-    !!title?.trim() &&
-    !!categoryId &&
-    (hasHard || hasCloud) &&
-    !!rating;
+    !!posterUrl && !!title?.trim() && !!categoryId && (hasHard || hasCloud);
   const [posterFile, setPosterFile] = useState<File | null>(null);
 
   const handleKindChange = (nextKind: string) => {
@@ -270,12 +279,17 @@ export function MediaItemFormDialog({
                 <PosterUploadField
                   posterUrl={posterUrl}
                   onChange={(file) => {
+                    if (posterBlobUrlRef.current) {
+                      URL.revokeObjectURL(posterBlobUrlRef.current);
+                      posterBlobUrlRef.current = null;
+                    }
+
                     setPosterFile(file);
 
                     if (file) {
-                      setValue("posterUrl", URL.createObjectURL(file), {
-                        shouldValidate: true,
-                      });
+                      const blobUrl = URL.createObjectURL(file);
+                      posterBlobUrlRef.current = blobUrl;
+                      setValue("posterUrl", blobUrl, { shouldValidate: true });
                       setValue("posterPublicId", undefined);
                     } else {
                       setValue("posterUrl", undefined);
