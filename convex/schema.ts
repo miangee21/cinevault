@@ -12,6 +12,7 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     icon: v.string(),
+    itemCount: v.number(),
   }).index("by_user", ["userId"]),
 
   // --- Subcategories: e.g. "Punjabi", "Anime" ---

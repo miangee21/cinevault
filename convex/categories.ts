@@ -35,6 +35,7 @@ export const createCategory = mutation({
       userId,
       name,
       icon: args.icon,
+      itemCount: 0,
     });
   },
 });
@@ -112,6 +113,7 @@ export const deleteCategory = mutation({
           userId,
           name: UNCATEGORIZED_NAME,
           icon: UNCATEGORIZED_ICON,
+          itemCount: 0,
         }));
 
       await Promise.all(
@@ -119,6 +121,11 @@ export const deleteCategory = mutation({
           ctx.db.patch(item._id, { categoryId: uncategorizedId }),
         ),
       );
+
+      await ctx.db.patch(uncategorizedId, {
+        itemCount:
+          (existingUncategorized?.itemCount ?? 0) + affectedItems.length,
+      });
     }
 
     // Also clean up any subcategories that belonged to this category

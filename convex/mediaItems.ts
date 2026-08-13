@@ -163,6 +163,38 @@ export const getMediaItemsPaginated = query({
   },
 });
 
+export const getMediaItemCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return {
+        total: 0,
+        byCategory: {},
+      };
+    }
+
+    const categories = await ctx.db
+      .query("categories")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const byCategory: Record<string, number> = {};
+    let total = 0;
+
+    for (const category of categories) {
+      const count = category.itemCount ?? 0;
+      byCategory[category._id] = count;
+      total += count;
+    }
+
+    return {
+      total,
+      byCategory,
+    };
+  },
+});
+
 export const createMediaItem = mutation({
   args: mediaItemFields,
   handler: async (ctx, args) => {
@@ -178,7 +210,17 @@ export const createMediaItem = mutation({
       throw new Error("Category not found");
     }
 
-    return await ctx.db.insert("mediaItems", { ...args, userId, title });
+    const mediaItemId = await ctx.db.insert("mediaItems", {
+      ...args,
+      userId,
+      title,
+    });
+
+    await ctx.db.patch(args.categoryId, {
+      itemCount: (category.itemCount ?? 0) + 1,
+    });
+
+    return mediaItemId;
   },
 });
 
@@ -220,6 +262,25 @@ export const updateMediaItem = mutation({
     const item = await ctx.db.get(id);
     if (!item || item.userId !== userId) throw new Error("Item not found");
 
+    if (updates.categoryId && updates.categoryId !== item.categoryId) {
+      const oldCategory = await ctx.db.get(item.categoryId);
+      const newCategory = await ctx.db.get(updates.categoryId);
+
+      if (!newCategory || newCategory.userId !== userId) {
+        throw new Error("Category not found");
+      }
+
+      if (oldCategory) {
+        await ctx.db.patch(item.categoryId, {
+          itemCount: Math.max(0, (oldCategory.itemCount ?? 0) - 1),
+        });
+      }
+
+      await ctx.db.patch(updates.categoryId, {
+        itemCount: (newCategory.itemCount ?? 0) + 1,
+      });
+    }
+
     if (updates.title !== undefined && updates.title.trim().length < 1) {
       throw new Error("Title is required");
     }
@@ -241,6 +302,14 @@ export const deleteMediaItem = mutation({
     if (item.posterPublicId) {
       await ctx.scheduler.runAfter(0, api.cloudinary.deleteCloudinaryImage, {
         publicId: item.posterPublicId,
+      });
+    }
+
+    const category = await ctx.db.get(item.categoryId);
+
+    if (category) {
+      await ctx.db.patch(item.categoryId, {
+        itemCount: Math.max(0, (category.itemCount ?? 0) - 1),
       });
     }
 

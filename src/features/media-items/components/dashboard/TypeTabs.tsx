@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useCategories } from "@/features/categories/hooks/useCategories";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { type Id } from "@convex/_generated/dataModel";
 
 interface TypeTabsProps {
@@ -14,6 +16,7 @@ interface TypeTabsProps {
 
 export function TypeTabs({ value, onChange }: TypeTabsProps) {
   const { categories, isLoading } = useCategories();
+  const itemCounts = useQuery(api.mediaItems.getMediaItemCounts);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -42,9 +45,21 @@ export function TypeTabs({ value, onChange }: TypeTabsProps) {
 
   if (isLoading || categories.length === 0) return null;
 
-  const tabs: { id: Id<"categories"> | "all"; name: string }[] = [
-    { id: "all", name: "All" },
-    ...categories.map((c) => ({ id: c._id, name: c.name })),
+  const tabs: {
+    id: Id<"categories"> | "all";
+    name: string;
+    count?: number;
+  }[] = [
+    {
+      id: "all",
+      name: "All",
+      count: value === "all" ? itemCounts?.total : undefined,
+    },
+    ...categories.map((c) => ({
+      id: c._id,
+      name: c.name,
+      count: value === c._id ? itemCounts?.byCategory[c._id] : undefined,
+    })),
   ];
 
   return (
@@ -83,6 +98,19 @@ export function TypeTabs({ value, onChange }: TypeTabsProps) {
               )}
             >
               {tab.name}
+
+              {tab.count !== undefined && (
+                <span
+                  className={cn(
+                    "ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums leading-none transition-colors",
+                    isActive
+                      ? "bg-primary-foreground/20 text-primary-foreground ring-1 ring-primary-foreground/10"
+                      : "bg-[hsl(var(--foreground)/0.08)] text-foreground/70 ring-1 ring-[hsl(var(--foreground)/0.06)]",
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
