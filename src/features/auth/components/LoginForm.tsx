@@ -76,7 +76,7 @@ export function LoginForm() {
           </FieldLabel>
           <AuthPillInput
             id="password"
-            type="password"
+            isPassword
             icon={<Lock />}
             placeholder="Password"
             autoComplete="current-password"

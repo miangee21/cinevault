@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as appSettings from "../appSettings.js";
 import type * as auth from "../auth.js";
 import type * as categories from "../categories.js";
 import type * as cloudinary from "../cloudinary.js";
@@ -23,6 +24,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  appSettings: typeof appSettings;
   auth: typeof auth;
   categories: typeof categories;
   cloudinary: typeof cloudinary;

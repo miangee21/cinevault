@@ -84,4 +84,9 @@ export default defineSchema({
       searchField: "title",
       filterFields: ["userId"],
     }),
+
+  appSettings: defineTable({
+    key: v.string(),
+    value: v.boolean(),
+  }).index("by_key", ["key"]),
 });

@@ -1,16 +1,25 @@
 //src/features/auth/components/AuthPillInput.tsx
 "use client";
 
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface AuthPillInputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon: ReactNode;
   invalid?: boolean;
+  isPassword?: boolean;
 }
 
 export const AuthPillInput = forwardRef<HTMLInputElement, AuthPillInputProps>(
-  ({ icon, invalid, className, ...props }, ref) => {
+  ({ icon, invalid, isPassword, className, type, ...props }, ref) => {
+    const [showPassword, setShowPassword] = useState(false);
+
     return (
       <div
         className={cn(
@@ -24,9 +33,25 @@ export const AuthPillInput = forwardRef<HTMLInputElement, AuthPillInputProps>(
         <span className="text-muted-foreground [&>svg]:size-4">{icon}</span>
         <input
           ref={ref}
+          type={isPassword ? (showPassword ? "text" : "password") : type}
           className="h-full w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           {...props}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            tabIndex={-1}
+            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff className="size-4" />
+            ) : (
+              <Eye className="size-4" />
+            )}
+          </button>
+        )}
       </div>
     );
   },

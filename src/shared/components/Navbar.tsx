@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronDown,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -29,6 +30,7 @@ import {
 import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { useIsAdmin } from "@/features/auth/hooks/useIsAdmin";
 import { cn } from "@/shared/lib/utils";
 
 const NAV_LINKS = [
@@ -46,6 +48,7 @@ export function Navbar() {
   const { signOut } = useAuthActions();
   const { user, isLoading } = useCurrentUser();
   const { showDeleteButton, setShowDeleteButton } = useDashboardPreferences();
+  const { isAdmin } = useIsAdmin();
 
   const handleLogout = async () => {
     await signOut();
@@ -155,6 +158,15 @@ export function Navbar() {
             <div className="h-px bg-border" />
 
             <div className="p-2">
+              {isAdmin && (
+                <Link
+                  href="/admin/settings"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.06)]"
+                >
+                  <ShieldCheck className="size-4" />
+                  Admin Settings
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}
