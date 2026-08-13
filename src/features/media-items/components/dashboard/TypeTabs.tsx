@@ -48,7 +48,7 @@ export function TypeTabs({ value, onChange }: TypeTabsProps) {
   ];
 
   return (
-    <div className="relative flex max-w-full items-center">
+    <div className="relative flex min-w-0 flex-1 items-center">
       {canScrollLeft && (
         <button
           type="button"

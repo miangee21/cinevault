@@ -81,10 +81,10 @@ export function MediaTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <TypeTabs value={categoryFilter} onChange={setCategoryFilter} />
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <SearchBar onSearch={setSearchTerm} />
 
           <div className="flex h-10 items-center rounded-full border border-border bg-[hsl(var(--foreground)/0.03)] p-1">
