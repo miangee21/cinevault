@@ -47,9 +47,7 @@ export function StarRatingInput({
               className="pointer-events-none absolute inset-0 overflow-hidden"
               style={{ width: `${fillPercent}%` }}
             >
-              <Star
-                className={cn(SIZE_MAP[size], "fill-primary text-primary")}
-              />
+              <Star className={cn(SIZE_MAP[size], "fill-rating text-rating")} />
             </div>
 
             {!readOnly && onChange && (

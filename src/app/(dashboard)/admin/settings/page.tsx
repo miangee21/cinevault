@@ -4,78 +4,101 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
-import { toast } from "sonner";
-import { UserPlus, Loader2, ShieldCheck } from "lucide-react";
-import { Switch } from "@/shared/components/ui/switch";
 import { api } from "@convex/_generated/api";
 import { useIsAdmin } from "@/features/auth/hooks/useIsAdmin";
 import { useSignupEnabled } from "@/features/auth/hooks/useSignupEnabled";
+import { Switch } from "@/shared/components/ui/switch";
+import { ShieldAlert, ShieldCheck, Users, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
-  const { signupEnabled, isLoading: isSettingLoading } = useSignupEnabled();
+  const { isAdmin, isLoading: checkingAdmin } = useIsAdmin();
+  const { signupEnabled, isLoading: checkingSignup } = useSignupEnabled();
   const setSignupEnabled = useMutation(api.appSettings.setSignupEnabled);
 
+  // Security Redirect: Boot non-admins back to dashboard
   useEffect(() => {
-    if (!isAdminLoading && !isAdmin) {
+    if (!checkingAdmin && !isAdmin) {
       router.replace("/dashboard");
     }
-  }, [isAdminLoading, isAdmin, router]);
+  }, [isAdmin, checkingAdmin, router]);
 
-  const handleToggle = async (checked: boolean) => {
-    try {
-      await setSignupEnabled({ enabled: checked });
-      toast.success(checked ? "Signups enabled" : "Signups disabled");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn't update setting",
-      );
-    }
-  };
-
-  if (isAdminLoading || !isAdmin) {
+  // Loading State
+  if (checkingAdmin || checkingSignup) {
     return (
-      <div className="flex min-h-[calc(100vh-57px)] items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary/60" />
       </div>
     );
   }
 
+  // Prevent UI flash before redirect happens
+  if (!isAdmin) return null;
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      await setSignupEnabled({ enabled: checked });
+      toast.success(
+        checked ? "Public signups enabled" : "Public signups disabled",
+        {
+          description: checked
+            ? "Anyone can now create a new account on your Cinevault instance."
+            : "New user registrations are now completely blocked.",
+        },
+      );
+    } catch {
+      toast.error("Update failed", {
+        description: "Could not update the signup settings. Please try again.",
+      });
+    }
+  };
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex size-11 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.12)] text-primary">
-          <ShieldCheck className="size-5" />
-        </div>
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">
-            Admin Settings
-          </h1>
-          <p className="text-sm text-muted-foreground">Only visible to you.</p>
-        </div>
+    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in-50 duration-500 pt-12 pb-10 px-6 sm:px-0">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground flex items-center gap-3">
+          <ShieldCheck className="w-9 h-9 text-primary" />
+          Admin Settings
+        </h1>
+        <p className="text-muted-foreground mt-3 text-sm sm:text-base">
+          Manage global application security and hosting preferences.
+        </p>
       </div>
 
-      <div className="rounded-2xl border border-border p-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <UserPlus className="size-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Allow new signups
-              </p>
-              <p className="text-xs text-muted-foreground">
-                When off, the signup page still shows normally but no account
-                can be created.
-              </p>
-            </div>
+      {/* Settings Card */}
+      <div className="bg-card border border-border/60 rounded-4xl p-6 sm:p-8 shadow-xl shadow-primary/5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="space-y-1.5">
+            <h3 className="font-semibold text-lg flex items-center gap-2 text-foreground">
+              <Users className="w-5 h-5 text-primary" />
+              Allow Public Signups
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+              Enable or disable the ability for new users to register. Turn this
+              off if you are self-hosting and want to keep your vault private.
+            </p>
           </div>
-          <Switch
-            checked={signupEnabled}
-            disabled={isSettingLoading}
-            onCheckedChange={handleToggle}
-          />
+
+          <div className="shrink-0">
+            <Switch
+              checked={signupEnabled}
+              onCheckedChange={handleToggle}
+              className="data-[state=checked]:bg-primary scale-110"
+              aria-label="Toggle public signups"
+            />
+          </div>
         </div>
+
+        {/* Warning Alert when closed */}
+        {!signupEnabled && (
+          <div className="mt-8 flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-4 text-sm text-destructive font-medium animate-in slide-in-from-top-2">
+            <ShieldAlert className="w-5 h-5 shrink-0" />
+            Signups are currently closed. Your Cinevault instance is fully
+            private.
+          </div>
+        )}
       </div>
     </div>
   );

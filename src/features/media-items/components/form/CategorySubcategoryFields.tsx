@@ -30,7 +30,7 @@ export function CategoryField() {
 
   const selectCategory = (id: string) => {
     setValue("categoryId", id, { shouldValidate: true });
-    setValue("subcategoryIds", [] as any, { shouldValidate: true });
+    setValue("subcategoryIds", [] as string[], { shouldValidate: true });
   };
 
   return (
@@ -100,7 +100,7 @@ export function SubcategoryField() {
     const next = subcategoryIds.includes(id)
       ? subcategoryIds.filter((s) => s !== id)
       : [...subcategoryIds, id];
-    setValue("subcategoryIds", next as any, { shouldValidate: true });
+    setValue("subcategoryIds", next as string[], { shouldValidate: true });
   };
 
   return (

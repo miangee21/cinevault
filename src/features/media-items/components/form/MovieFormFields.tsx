@@ -4,12 +4,11 @@
 import { useFormContext } from "react-hook-form";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
-import { type MediaItemFormValues } from "../../types";
+import { type MovieFormValues } from "../../types";
 
 export function MovieDurationField() {
-  const { watch, setValue } = useFormContext<MediaItemFormValues>();
-  const totalDurationSeconds = watch("totalDurationSeconds" as any) as
-    number | undefined;
+  const { watch, setValue } = useFormContext<MovieFormValues>();
+  const totalDurationSeconds = watch("totalDurationSeconds");
   const totalHours = totalDurationSeconds
     ? Math.floor(totalDurationSeconds / 3600)
     : undefined;
@@ -19,7 +18,7 @@ export function MovieDurationField() {
 
   const setTotalDuration = (hours: number, minutes: number) => {
     const total = hours * 3600 + minutes * 60;
-    setValue("totalDurationSeconds" as any, total > 0 ? total : undefined, {
+    setValue("totalDurationSeconds", total > 0 ? total : undefined, {
       shouldValidate: true,
     });
   };
@@ -57,11 +56,10 @@ export function MovieDurationField() {
 }
 
 export function MovieProgressField() {
-  const { register, watch, setValue } = useFormContext<MediaItemFormValues>();
+  const { register, watch, setValue } = useFormContext<MovieFormValues>();
   const status = watch("status");
-  const totalDurationSeconds = watch("totalDurationSeconds" as any) as
-    number | undefined;
-  const progressSeconds = watch("progressSeconds" as any) as number | undefined;
+  const totalDurationSeconds = watch("totalDurationSeconds");
+  const progressSeconds = watch("progressSeconds");
   const progressHours = progressSeconds
     ? Math.floor(progressSeconds / 3600)
     : undefined;
@@ -71,7 +69,7 @@ export function MovieProgressField() {
 
   const setProgressDuration = (hours: number, minutes: number) => {
     const total = hours * 3600 + minutes * 60;
-    setValue("progressSeconds" as any, total > 0 ? total : undefined, {
+    setValue("progressSeconds", total > 0 ? total : undefined, {
       shouldValidate: true,
     });
   };
@@ -88,7 +86,7 @@ export function MovieProgressField() {
           placeholder="e.g. 32m 45s in"
           className="rounded-xl text-xs"
           rows={2}
-          {...register("progressDescription" as any)}
+          {...register("progressDescription")}
         />
       </div>
 

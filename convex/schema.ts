@@ -13,6 +13,7 @@ export default defineSchema({
     name: v.string(),
     icon: v.string(),
     itemCount: v.number(),
+    deletedAt: v.optional(v.number()), // For Soft Delete
   }).index("by_user", ["userId"]),
 
   // --- Subcategories: e.g. "Punjabi", "Anime" ---
@@ -21,6 +22,8 @@ export default defineSchema({
     categoryId: v.id("categories"),
     name: v.string(),
     icon: v.string(),
+    itemCount: v.optional(v.number()), // Future proofing 0-load count
+    deletedAt: v.optional(v.number()), // For Soft Delete
   })
     .index("by_category", ["categoryId"])
     .index("by_user", ["userId"]),
@@ -79,8 +82,6 @@ export default defineSchema({
     .index("by_user_category_and_title", ["userId", "categoryId", "title"])
     .index("by_user_and_rating", ["userId", "rating"])
     .index("by_user_category_and_rating", ["userId", "categoryId", "rating"])
-    .index("by_user_and_status", ["userId", "status"])
-    .index("by_user_category_and_status", ["userId", "categoryId", "status"])
     .searchIndex("search_title", {
       searchField: "title",
       filterFields: ["userId"],

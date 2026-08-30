@@ -35,13 +35,18 @@ export function SubcategoryList({ categoryId }: SubcategoryListProps) {
           trigger={
             <button
               type="button"
-              className="group flex items-center gap-1.5 rounded-full border border-border py-1.5 pl-3 pr-2.5 text-xs font-medium text-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)]"
+              className="group flex items-center gap-1.5 rounded-full border border-border py-1.5 pl-3 pr-2.5 text-xs font-medium text-foreground transition-colors hover:border-[hsl(var(--primary)/0.4)] hover:bg-muted/30"
             >
               <IconGlyph
                 name={sub.icon}
                 className="size-3.5 text-muted-foreground"
               />
-              {sub.name}
+              <span>{sub.name}</span>
+              {(sub.itemCount ?? 0) > 0 && (
+                <span className="flex items-center justify-center text-[10px] font-bold text-muted-foreground bg-muted/60 border border-border/50 px-1.5 py-0.5 rounded-md ml-0.5 min-w-5">
+                  {sub.itemCount}
+                </span>
+              )}
               <Pencil className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           }

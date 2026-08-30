@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -40,6 +40,7 @@ import {
   type MediaItemFormValues,
   type MediaItem,
 } from "../../types";
+import { type Id } from "@convex/_generated/dataModel";
 
 interface MediaItemFormDialogProps {
   mode: "create" | "edit";
@@ -123,24 +124,25 @@ export function MediaItemFormDialog({
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
+    getValues,
     reset,
     formState: { errors, isSubmitting },
   } = form;
 
   const posterBlobUrlRef = useRef<string | null>(null);
+  const [posterFile, setPosterFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
       reset(buildDefaultValues(item));
       setPosterFile(null);
     } else if (posterBlobUrlRef.current) {
       URL.revokeObjectURL(posterBlobUrlRef.current);
       posterBlobUrlRef.current = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  };
 
   useEffect(() => {
     return () => {
@@ -150,23 +152,28 @@ export function MediaItemFormDialog({
     };
   }, []);
 
-  const kind = watch("kind");
-  const posterUrl = watch("posterUrl");
-  const title = watch("title");
-  const categoryId = watch("categoryId");
-  const hasHard = watch("hasHard");
-  const hasCloud = watch("hasCloud");
-  const rating = watch("rating");
+  const [kind, posterUrl, title, categoryId, hasHard, hasCloud] = useWatch({
+    control: form.control,
+    name: ["kind", "posterUrl", "title", "categoryId", "hasHard", "hasCloud"],
+  });
 
   const isFormValid =
     !!posterUrl && !!title?.trim() && !!categoryId && (hasHard || hasCloud);
-  const [posterFile, setPosterFile] = useState<File | null>(null);
 
   const handleKindChange = (nextKind: string) => {
     if (nextKind !== "movie" && nextKind !== "series") return;
-    setValue("kind", nextKind, { shouldValidate: true });
-    if (nextKind === "series" && !watch("seasons" as any)) {
-      setValue("seasons" as any, [], { shouldValidate: true });
+    setValue("kind", nextKind as "movie" | "series", { shouldValidate: true });
+    if (nextKind === "series") {
+      const values = getValues() as Record<string, unknown>;
+      if (!values.seasons) {
+        (
+          setValue as unknown as (
+            path: string,
+            value: unknown[],
+            opts: object,
+          ) => void
+        )("seasons", [], { shouldValidate: true });
+      }
     }
   };
 
@@ -205,8 +212,8 @@ export function MediaItemFormDialog({
       }
 
       const payload = {
-        categoryId: values.categoryId as any,
-        subcategoryIds: values.subcategoryIds as any,
+        categoryId: values.categoryId as Id<"categories">,
+        subcategoryIds: values.subcategoryIds as Id<"subcategories">[],
         title: values.title,
         kind: values.kind,
         posterUrl: uploadedPosterUrl,
@@ -255,7 +262,7 @@ export function MediaItemFormDialog({
 
         toast.success("Changes saved");
       }
-      setOpen(false);
+      handleOpenChange(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Something went wrong",
@@ -264,7 +271,7 @@ export function MediaItemFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={trigger as React.ReactElement} />
 
       <DialogContent className="media-item-dialog max-h-[90vh] overflow-y-auto">
@@ -273,7 +280,7 @@ export function MediaItemFormDialog({
         </DialogHeader>
 
         <FormProvider {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} noValidate>
             <FieldGroup className="gap-5">
               <div className="flex items-start gap-4">
                 <PosterUploadField

@@ -9,16 +9,7 @@ const sortOptionValidator = v.union(
   v.literal("name_desc"),
   v.literal("rating_asc"),
   v.literal("rating_desc"),
-  v.literal("completed_first"),
-  v.literal("in_progress_first"),
-  v.literal("not_started_first"),
 );
-
-const STATUS_PRIORITY = {
-  completed_first: ["completed", "in_progress", "not_started"],
-  in_progress_first: ["in_progress", "completed", "not_started"],
-  not_started_first: ["not_started", "in_progress", "completed"],
-} as const;
 
 function validateRating(rating: number | undefined) {
   if (rating === undefined) return;
@@ -87,12 +78,19 @@ export const getMediaItemsPaginated = query({
 
     const term = args.searchTerm?.trim();
     if (term && term.length > 0) {
-      return await ctx.db
+      let searchQuery = ctx.db
         .query("mediaItems")
         .withSearchIndex("search_title", (q) =>
           q.search("title", term).eq("userId", userId),
-        )
-        .paginate(args.paginationOpts);
+        );
+
+      if (args.categoryId) {
+        searchQuery = searchQuery.filter((q) =>
+          q.eq(q.field("categoryId"), args.categoryId),
+        );
+      }
+
+      return await searchQuery.paginate(args.paginationOpts);
     }
 
     if (args.sortOption === "name_asc" || args.sortOption === "name_desc") {
@@ -109,57 +107,17 @@ export const getMediaItemsPaginated = query({
       return await baseQuery.order(order).paginate(args.paginationOpts);
     }
 
-    if (args.sortOption === "rating_asc" || args.sortOption === "rating_desc") {
-      const order = args.sortOption === "rating_asc" ? "asc" : "desc";
-      const baseQuery = args.categoryId
-        ? ctx.db
-            .query("mediaItems")
-            .withIndex("by_user_category_and_rating", (q) =>
-              q.eq("userId", userId).eq("categoryId", args.categoryId!),
-            )
-        : ctx.db
-            .query("mediaItems")
-            .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
-      return await baseQuery.order(order).paginate(args.paginationOpts);
-    }
-
-    const priority = STATUS_PRIORITY[args.sortOption];
-
-    const groups = await Promise.all(
-      priority.map((status) => {
-        const baseQuery = args.categoryId
-          ? ctx.db
-              .query("mediaItems")
-              .withIndex("by_user_category_and_status", (q) =>
-                q
-                  .eq("userId", userId)
-                  .eq("categoryId", args.categoryId!)
-                  .eq("status", status),
-              )
-          : ctx.db
-              .query("mediaItems")
-              .withIndex("by_user_and_status", (q) =>
-                q.eq("userId", userId).eq("status", status),
-              );
-        return baseQuery.collect();
-      }),
-    );
-
-    const sorted = groups.flatMap((group) =>
-      [...group].sort((a, b) => a.title.localeCompare(b.title)),
-    );
-
-    const offset = args.paginationOpts.cursor
-      ? Number(args.paginationOpts.cursor)
-      : 0;
-    const page = sorted.slice(offset, offset + args.paginationOpts.numItems);
-    const nextOffset = offset + page.length;
-
-    return {
-      page,
-      isDone: nextOffset >= sorted.length,
-      continueCursor: String(nextOffset),
-    };
+    const order = args.sortOption === "rating_asc" ? "asc" : "desc";
+    const baseQuery = args.categoryId
+      ? ctx.db
+          .query("mediaItems")
+          .withIndex("by_user_category_and_rating", (q) =>
+            q.eq("userId", userId).eq("categoryId", args.categoryId!),
+          )
+      : ctx.db
+          .query("mediaItems")
+          .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
+    return await baseQuery.order(order).paginate(args.paginationOpts);
   },
 });
 
@@ -219,6 +177,14 @@ export const createMediaItem = mutation({
     await ctx.db.patch(args.categoryId, {
       itemCount: (category.itemCount ?? 0) + 1,
     });
+
+    // Auto-increment subcategory counts
+    for (const subId of args.subcategoryIds) {
+      const sub = await ctx.db.get(subId);
+      if (sub) {
+        await ctx.db.patch(subId, { itemCount: (sub.itemCount ?? 0) + 1 });
+      }
+    }
 
     return mediaItemId;
   },
@@ -281,6 +247,34 @@ export const updateMediaItem = mutation({
       });
     }
 
+    // Auto-update subcategory counts if they changed
+    if (
+      updates.subcategoryIds &&
+      updates.subcategoryIds !== item.subcategoryIds
+    ) {
+      const oldSubs = new Set(item.subcategoryIds);
+      const newSubs = new Set(updates.subcategoryIds);
+
+      const removedSubs = [...oldSubs].filter((sid) => !newSubs.has(sid));
+      const addedSubs = [...newSubs].filter((sid) => !oldSubs.has(sid));
+
+      for (const subId of removedSubs) {
+        const sub = await ctx.db.get(subId);
+        if (sub) {
+          await ctx.db.patch(subId, {
+            itemCount: Math.max(0, (sub.itemCount ?? 0) - 1),
+          });
+        }
+      }
+
+      for (const subId of addedSubs) {
+        const sub = await ctx.db.get(subId);
+        if (sub) {
+          await ctx.db.patch(subId, { itemCount: (sub.itemCount ?? 0) + 1 });
+        }
+      }
+    }
+
     if (updates.title !== undefined && updates.title.trim().length < 1) {
       throw new Error("Title is required");
     }
@@ -311,6 +305,16 @@ export const deleteMediaItem = mutation({
       await ctx.db.patch(item.categoryId, {
         itemCount: Math.max(0, (category.itemCount ?? 0) - 1),
       });
+    }
+
+    // Auto-decrement subcategory counts
+    for (const subId of item.subcategoryIds) {
+      const sub = await ctx.db.get(subId);
+      if (sub) {
+        await ctx.db.patch(subId, {
+          itemCount: Math.max(0, (sub.itemCount ?? 0) - 1),
+        });
+      }
     }
 
     await ctx.db.delete(args.id);

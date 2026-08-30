@@ -12,7 +12,12 @@ export const getSubcategories = query({
     return await ctx.db
       .query("subcategories")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("deletedAt"), undefined), // Skip trashed items
+        ),
+      )
       .collect();
   },
 });
@@ -35,11 +40,23 @@ export const createSubcategory = mutation({
     const name = args.name.trim();
     if (name.length < 1) throw new Error("Subcategory name is required");
 
+    // Duplicate Check
+    const existing = await ctx.db
+      .query("subcategories")
+      .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    if (existing.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
+      throw new Error(`A subcategory named "${name}" already exists here.`);
+    }
+
     return await ctx.db.insert("subcategories", {
       userId,
       categoryId: args.categoryId,
       name,
       icon: args.icon,
+      itemCount: 0, // Initialize count to 0 for 0-load queries
     });
   },
 });
@@ -62,24 +79,33 @@ export const updateSubcategory = mutation({
     const name = args.name.trim();
     if (name.length < 1) throw new Error("Subcategory name is required");
 
+    // Duplicate Check for Updates
+    const existing = await ctx.db
+      .query("subcategories")
+      .withIndex("by_category", (q) =>
+        q.eq("categoryId", subcategory.categoryId),
+      )
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    if (
+      existing.some(
+        (s) => s._id !== args.id && s.name.toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      throw new Error(`A subcategory named "${name}" already exists here.`);
+    }
+
     await ctx.db.patch(args.id, { name, icon: args.icon });
   },
 });
 
-// Lets the UI show "This will affect N item(s)" before confirming delete
+// 100% 0-Load Count: Just reads the pre-calculated number from schema
 export const getSubcategoryItemCount = query({
   args: { id: v.id("subcategories") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return 0;
-
-    const userItems = await ctx.db
-      .query("mediaItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    return userItems.filter((item) => item.subcategoryIds.includes(args.id))
-      .length;
+    const subcategory = await ctx.db.get(args.id);
+    return subcategory?.itemCount || 0;
   },
 });
 
@@ -94,23 +120,14 @@ export const deleteSubcategory = mutation({
       throw new Error("Subcategory not found");
     }
 
-    const userItems = await ctx.db
-      .query("mediaItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    // 0-Load Guard: Strictly check schema count
+    if (subcategory.itemCount && subcategory.itemCount > 0) {
+      throw new Error(
+        "Cannot delete: This subcategory is linked to items. Please remove it from those items first.",
+      );
+    }
 
-    const affectedItems = userItems.filter((item) =>
-      item.subcategoryIds.includes(args.id),
-    );
-
-    await Promise.all(
-      affectedItems.map((item) =>
-        ctx.db.patch(item._id, {
-          subcategoryIds: item.subcategoryIds.filter((sid) => sid !== args.id),
-        }),
-      ),
-    );
-
-    await ctx.db.delete(args.id);
+    // Soft delete subcategory
+    await ctx.db.patch(args.id, { deletedAt: Date.now() });
   },
 });

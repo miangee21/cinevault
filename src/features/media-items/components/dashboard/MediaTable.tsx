@@ -6,7 +6,6 @@ import { Plus, Search as SearchIcon, List, Grid2X2 } from "lucide-react";
 import { Table, TableBody } from "@/shared/components/ui/table";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-
 import { TypeTabs } from "./TypeTabs";
 import { SearchBar } from "./SearchBar";
 import { SortDropdown } from "./SortDropdown";
@@ -15,12 +14,13 @@ import { MediaTableHeader } from "./MediaTableHeader";
 import { MediaTableRow } from "./MediaTableRow";
 import { MediaGridCard } from "./MediaGridCard";
 import { MediaItemFormDialog } from "../form/MediaItemFormDialog";
-
 import { useMediaItems } from "../../hooks/useMediaItems";
 import { useColumnWidths } from "../../hooks/useColumnWidths";
 import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
 import { type SortOption } from "../../utils/sortMediaItems";
 import { type Id } from "@convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 
 export function MediaTable() {
   const [categoryFilter, setCategoryFilter] = useState<
@@ -28,10 +28,12 @@ export function MediaTable() {
   >("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("name_asc");
-  const [pageSize, setPageSize] = useState<PageSize>("20");
+  const [pageSize, setPageSize] = useState<PageSize>("10");
   const [currentPage, setCurrentPage] = useState(1);
   const { widths, resizeColumn } = useColumnWidths();
   const { showDeleteButton, viewMode, setViewMode } = useDashboardPreferences();
+
+  const itemCounts = useQuery(api.mediaItems.getMediaItemCounts);
 
   const { items, status, loadMore } = useMediaItems(
     categoryFilter === "all" ? undefined : categoryFilter,
@@ -43,41 +45,49 @@ export function MediaTable() {
   const sortedItems = items;
   const isSearching = searchTerm.trim().length > 0;
   const isLoadingFirstPage = status === "LoadingFirstPage";
-  const pageSizeNumber = pageSize === "all" ? undefined : Number(pageSize);
+  const pageSizeNumber = Number(pageSize);
 
-  useEffect(() => {
+  const [prevFilters, setPrevFilters] = useState({
+    categoryFilter,
+    searchTerm,
+    pageSize,
+    sortOption,
+  });
+  if (
+    categoryFilter !== prevFilters.categoryFilter ||
+    searchTerm !== prevFilters.searchTerm ||
+    pageSize !== prevFilters.pageSize ||
+    sortOption !== prevFilters.sortOption
+  ) {
+    setPrevFilters({ categoryFilter, searchTerm, pageSize, sortOption });
     setCurrentPage(1);
-  }, [categoryFilter, searchTerm, pageSize]);
+  }
 
   useEffect(() => {
-    if (pageSize === "all") {
-      if (status === "CanLoadMore") loadMore(200);
-      return;
-    }
-    if (!pageSizeNumber) return;
     const neededCount = currentPage * pageSizeNumber;
     if (sortedItems.length < neededCount && status === "CanLoadMore") {
       loadMore(pageSizeNumber);
     }
-  }, [
-    pageSize,
-    pageSizeNumber,
-    currentPage,
-    sortedItems.length,
-    status,
-    loadMore,
-  ]);
+  }, [pageSizeNumber, currentPage, sortedItems.length, status, loadMore]);
 
-  const pageItems = pageSizeNumber
-    ? sortedItems.slice(
-        (currentPage - 1) * pageSizeNumber,
-        currentPage * pageSizeNumber,
-      )
-    : sortedItems;
+  const pageItems = sortedItems.slice(
+    (currentPage - 1) * pageSizeNumber,
+    currentPage * pageSizeNumber,
+  );
 
-  const totalPages = pageSizeNumber
-    ? Math.max(1, Math.ceil(sortedItems.length / pageSizeNumber))
-    : 1;
+  const totalItemsCount = isSearching
+    ? sortedItems.length
+    : categoryFilter === "all"
+      ? (itemCounts?.total ?? 0)
+      : (itemCounts?.byCategory[categoryFilter] ?? 0);
+
+  const totalPages = Math.max(
+    1,
+    isSearching
+      ? Math.ceil(sortedItems.length / pageSizeNumber) +
+          (status === "CanLoadMore" ? 1 : 0)
+      : Math.ceil(totalItemsCount / pageSizeNumber),
+  );
 
   return (
     <div className="space-y-4">

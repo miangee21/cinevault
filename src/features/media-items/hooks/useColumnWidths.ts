@@ -31,12 +31,15 @@ export function useColumnWidths() {
     useState<Record<ColumnKey, number>>(DEFAULT_WIDTHS);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setWidths((prev) => ({ ...prev, ...JSON.parse(stored) }));
-    } catch {
-      // corrupt/missing storage — fall back to defaults silently
-    }
+    const timer = setTimeout(() => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) setWidths((prev) => ({ ...prev, ...JSON.parse(stored) }));
+      } catch {
+        // corrupt/missing storage — fall back to defaults silently
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const resizeColumn = (key: ColumnKey, deltaX: number) => {

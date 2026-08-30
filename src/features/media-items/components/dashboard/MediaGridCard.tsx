@@ -41,10 +41,10 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
           </div>
         )}
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-black/50 to-transparent opacity-70" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-overlay/50 to-transparent opacity-70" />
 
         <div className="absolute left-3 top-3 flex items-center gap-1.5">
-          <span className="rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+          <span className="rounded-full bg-overlay/55 px-2.5 py-1 text-[11px] font-medium text-overlay-foreground backdrop-blur-md">
             {item.kind === "movie" ? "Movie" : "Series"}
           </span>
         </div>
@@ -60,7 +60,7 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
               trigger={
                 <button
                   type="button"
-                  className="flex size-7 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+                  className="flex size-7 items-center justify-center rounded-full text-white transition-colors hover:bg-overlay-foreground/15"
                   aria-label={`Edit ${item.title}`}
                 >
                   <Pencil className="size-3.5" />

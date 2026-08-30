@@ -35,7 +35,7 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
           </button>
         }
       />
-      <PopoverContent align="end" className="w-72 p-1">
+      <PopoverContent align="end" className="w-48 p-1">
         {SORT_OPTIONS.map((opt) => {
           const isSelected = opt.value === value;
           return (

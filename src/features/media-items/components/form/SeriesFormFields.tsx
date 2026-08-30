@@ -12,41 +12,31 @@ import {
 } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
 import { SeasonEpisodeInput } from "./SeasonEpisodeInput";
-import { type MediaItemFormValues } from "../../types";
+import { type SeriesFormValues } from "../../types";
 
 export function SeriesSeasonsField() {
-  const { watch, setValue } = useFormContext<MediaItemFormValues>();
-  const seasons =
-    (watch("seasons" as any) as {
-      seasonNumber: number;
-      totalEpisodes: number;
-    }[]) ?? [];
+  const { watch, setValue } = useFormContext<SeriesFormValues>();
+  const seasons = watch("seasons") ?? [];
 
   return (
     <div className="w-64">
       <p className="mb-1.5 text-sm font-medium text-foreground">Seasons</p>
       <SeasonEpisodeInput
         value={seasons}
-        onChange={(next) =>
-          setValue("seasons" as any, next, { shouldValidate: true })
-        }
+        onChange={(next) => setValue("seasons", next, { shouldValidate: true })}
       />
     </div>
   );
 }
 
 export function SeriesProgressField() {
-  const { watch, setValue } = useFormContext<MediaItemFormValues>();
+  const { watch, setValue } = useFormContext<SeriesFormValues>();
   const [timeText, setTimeText] = useState("");
 
   const status = watch("status");
-  const seasons =
-    (watch("seasons" as any) as {
-      seasonNumber: number;
-      totalEpisodes: number;
-    }[]) ?? [];
-  const progressSeason = watch("progressSeason" as any) as number | undefined;
-  const progressEpisode = watch("progressEpisode" as any) as number | undefined;
+  const seasons = watch("seasons") ?? [];
+  const progressSeason = watch("progressSeason");
+  const progressEpisode = watch("progressEpisode");
   const currentSeasonData = seasons.find(
     (s) => s.seasonNumber === progressSeason,
   );
@@ -55,7 +45,7 @@ export function SeriesProgressField() {
     if (!progressSeason || !progressEpisode) return;
     const base = `S${progressSeason}E${progressEpisode}`;
     const combined = timeText.trim() ? `${base} - ${timeText.trim()}` : base;
-    setValue("progressDescription" as any, combined, { shouldValidate: true });
+    setValue("progressDescription", combined, { shouldValidate: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progressSeason, progressEpisode, timeText]);
 
@@ -80,7 +70,7 @@ export function SeriesProgressField() {
             value={progressSeason !== undefined ? String(progressSeason) : ""}
             onValueChange={(value) => {
               if (!value) return;
-              setValue("progressSeason" as any, Number(value), {
+              setValue("progressSeason", Number(value), {
                 shouldValidate: true,
               });
             }}
@@ -118,7 +108,7 @@ export function SeriesProgressField() {
               const capped = currentSeasonData
                 ? Math.min(raw, currentSeasonData.totalEpisodes)
                 : raw;
-              setValue("progressEpisode" as any, capped, {
+              setValue("progressEpisode", capped, {
                 shouldValidate: true,
               });
             }}

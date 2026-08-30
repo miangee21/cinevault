@@ -1,100 +1,154 @@
-//src/features/categories/components/IconPicker.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import * as React from "react";
 import { Search } from "lucide-react";
-import { IconGlyph } from "./IconGlyph";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/shared/components/ui/dialog";
-import { Input } from "@/shared/components/ui/input";
 import { cn } from "@/shared/lib/utils";
-import { CATEGORY_ICONS, type CategoryIconName } from "../constants/iconList";
+import * as LucideIcons from "lucide-react";
+import { CustomScrollbar } from "@/shared/components/CustomScrollbar";
+
+export const CURATED_ICONS = [
+  // Formats / mediums
+  "Clapperboard",
+  "Film",
+  "Tv",
+  "Tv2",
+  "Video",
+  "Camera",
+  "Popcorn",
+  "Ticket",
+  "Disc3",
+  "Album",
+  "PlayCircle",
+  "MonitorPlay",
+
+  // Genres / moods
+  "Ghost",
+  "Skull",
+  "Swords",
+  "Wand2",
+  "Rocket",
+  "Bomb",
+  "Flame",
+  "Heart",
+  "HeartCrack",
+  "Laugh",
+  "Drama",
+  "Sparkles",
+  "Zap",
+  "Crown",
+  "Shield",
+  "Gem",
+  "Music",
+  "Mic2",
+  "PartyPopper",
+
+  // Themes / settings
+  "Globe",
+  "Globe2",
+  "MapPin",
+  "Compass",
+  "Mountain",
+  "Building2",
+  "Landmark",
+  "Trees",
+  "Waves",
+  "Sun",
+  "Moon",
+  "Star",
+  "Rainbow",
+
+  // People / groups
+  "Users",
+  "User",
+  "Baby",
+  "Cat",
+  "Dog",
+
+  // Language / region flags-as-concepts
+  "Flag",
+  "Languages",
+  "BookOpen",
+
+  // Status / meta
+  "Clock",
+  "History",
+  "TrendingUp",
+  "Award",
+  "Trophy",
+  "FolderHeart",
+  "Bookmark",
+  "Eye",
+  "EyeOff",
+
+  // System (used internally, e.g. Uncategorized)
+  "FolderX",
+] as const;
 
 interface IconPickerProps {
   value: string;
-  onChange: (icon: CategoryIconName) => void;
+  onChange: (iconName: string) => void;
+  disabled?: boolean;
 }
 
-export function IconPicker({ value, onChange }: IconPickerProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+export function IconPicker({ value, onChange, disabled }: IconPickerProps) {
+  const [searchTerm, setSearchTerm] = React.useState("");
 
-  const filteredIcons = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return CATEGORY_ICONS;
-    return CATEGORY_ICONS.filter((icon) => icon.toLowerCase().includes(term));
-  }, [search]);
-
-  const handleSelect = (icon: CategoryIconName) => {
-    onChange(icon);
-    setOpen(false);
-    setSearch("");
-  };
+  const filteredIcons = CURATED_ICONS.filter((name) =>
+    name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <button
-            type="button"
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-[hsl(var(--foreground)/0.04)] text-foreground transition-colors hover:bg-[hsl(var(--foreground)/0.08)]"
-            aria-label="Choose an icon"
-          >
-            <IconGlyph name={value} className="size-5" />
-          </button>
-        }
-      />
+    <div className="flex flex-col gap-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+        <input
+          type="text"
+          placeholder="Search icons..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          disabled={disabled}
+          className="w-full bg-background/50 ring-1 ring-border/50 focus:ring-2 focus:ring-primary/60 h-10 rounded-xl pl-9 pr-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/50"
+        />
+      </div>
 
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Choose an icon</DialogTitle>
-        </DialogHeader>
+      <CustomScrollbar className="grid grid-cols-6 sm:grid-cols-7 gap-2 max-h-44 p-1 pr-2">
+        {filteredIcons.map((iconName) => {
+          const IconComponent = LucideIcons[
+            iconName as keyof typeof LucideIcons
+          ] as React.ElementType;
+          if (!IconComponent) return null;
+          const isSelected = value === iconName;
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search icons..."
-            className="rounded-full pl-10"
-            autoFocus
-          />
-        </div>
-
-        <div className="grid max-h-72 grid-cols-6 gap-2 overflow-y-auto pt-2 pb-1 pr-1">
-          {filteredIcons.map((icon) => {
-            const isSelected = icon === value;
-            return (
-              <button
-                key={icon}
-                type="button"
-                onClick={() => handleSelect(icon)}
+          return (
+            <button
+              key={iconName}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(iconName)}
+              title={iconName}
+              className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 border",
+                isSelected
+                  ? "bg-primary text-primary-foreground border-primary shadow-md scale-110"
+                  : "bg-background border-border/40 text-muted-foreground hover:bg-muted hover:border-border hover:text-foreground",
+                disabled && "opacity-50 pointer-events-none",
+              )}
+            >
+              <IconComponent
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-xl border transition-colors",
-                  isSelected
-                    ? "border-primary bg-[hsl(var(--primary)/0.12)] text-primary"
-                    : "border-border text-muted-foreground hover:border-[hsl(var(--primary)/0.4)] hover:text-foreground",
+                  "w-5 h-5",
+                  isSelected && "animate-in zoom-in duration-300",
                 )}
-                aria-label={icon}
-              >
-                <IconGlyph name={icon} className="size-5" />
-              </button>
-            );
-          })}
-
-          {filteredIcons.length === 0 && (
-            <p className="col-span-6 py-6 text-center text-sm text-muted-foreground">
-              No icons match &quot;{search}&quot;
-            </p>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+              />
+            </button>
+          );
+        })}
+        {filteredIcons.length === 0 && (
+          <div className="col-span-full py-4 text-center text-sm text-muted-foreground">
+            No icons found for &quot;{searchTerm}&quot;
+          </div>
+        )}
+      </CustomScrollbar>
+    </div>
   );
 }

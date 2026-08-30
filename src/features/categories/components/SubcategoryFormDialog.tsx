@@ -2,10 +2,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Tags } from "lucide-react";
 
 import {
   Dialog,
@@ -24,14 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldError,
-} from "@/shared/components/ui/field";
-import { Input } from "@/shared/components/ui/input";
-
+import { Button } from "@/shared/components/ui/button";
 import { IconPicker } from "./IconPicker";
 import {
   useCreateSubcategory,
@@ -65,13 +58,14 @@ export function SubcategoryFormDialog({
   const createSubcategory = useCreateSubcategory();
   const updateSubcategory = useUpdateSubcategory();
   const deleteSubcategory = useDeleteSubcategory();
+
   const { count: affectedCount, isLoading: countLoading } =
-    useSubcategoryItemCount(deleteAlertOpen ? subcategory?._id : undefined);
+    useSubcategoryItemCount(subcategory?._id);
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors, isSubmitting },
@@ -88,30 +82,38 @@ export function SubcategoryFormDialog({
     }
   }, [open, subcategory, reset]);
 
-  const icon = watch("icon");
+  const currentIcon = useWatch({ control, name: "icon" }) || "Tag";
 
   const onSubmit = async (values: SubcategoryFormValues) => {
     try {
       if (mode === "create") {
         await createSubcategory({ categoryId, ...values });
-        toast.success("Subcategory created");
+        toast.success("Subcategory created successfully!");
       } else if (subcategory) {
         await updateSubcategory({ id: subcategory._id, ...values });
-        toast.success("Subcategory updated");
+        toast.success("Subcategory updated successfully!");
       }
       setOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Something went wrong",
-      );
+      let errorMessage = "Something went wrong";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        if (errorMessage.includes("Uncaught Error: ")) {
+          errorMessage = errorMessage
+            .split("Uncaught Error: ")[1]
+            .split(" at ")[0]
+            .trim();
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 
   const handleConfirmDelete = async () => {
-    if (!subcategory) return;
+    if (!subcategory || affectedCount > 0) return;
     try {
       await deleteSubcategory({ id: subcategory._id });
-      toast.success("Subcategory deleted");
+      toast.success("Subcategory moved to Trash.");
       setDeleteAlertOpen(false);
       setOpen(false);
     } catch (error) {
@@ -125,89 +127,124 @@ export function SubcategoryFormDialog({
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={trigger as React.ReactElement} />
-
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {mode === "create" ? "New subcategory" : "Edit subcategory"}
+        <DialogContent className="sm:max-w-md rounded-4xl bg-card border-border/50 shadow-2xl p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Tags className="w-4 h-4 text-primary" />
+              </div>
+              {mode === "create" ? "New Subcategory" : "Edit Subcategory"}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <FieldGroup className="gap-4">
-              <div className="flex items-end gap-3">
-                <IconPicker
-                  value={icon}
-                  onChange={(value) =>
-                    setValue("icon", value, { shouldValidate: true })
-                  }
-                />
-                <Field className="flex-1" data-invalid={!!errors.name}>
-                  <FieldLabel htmlFor="subcategory-name">Name</FieldLabel>
-                  <Input
-                    id="subcategory-name"
-                    placeholder="e.g. Anime"
-                    className="rounded-full px-5"
-                    aria-invalid={!!errors.name}
-                    {...register("name")}
-                  />
-                  {errors.name && (
-                    <FieldError>{errors.name.message}</FieldError>
-                  )}
-                </Field>
-              </div>
-              {errors.icon && <FieldError>{errors.icon.message}</FieldError>}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4"
+            noValidate
+          >
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block ml-1">
+                Subcategory Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Action, Comedy"
+                className="w-full bg-background/50 ring-1 ring-border/50 focus:ring-2 focus:ring-primary/60 h-12 rounded-full px-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/50"
+                disabled={isSubmitting}
+                {...register("name")}
+              />
+              {errors.name && (
+                <p className="text-destructive text-xs mt-1.5 ml-3 font-medium">
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="submit"
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block ml-1">
+                Select Icon
+              </label>
+              <IconPicker
+                value={currentIcon}
+                onChange={(val) =>
+                  setValue("icon", val, { shouldValidate: true })
+                }
+                disabled={isSubmitting}
+              />
+              {errors.icon && (
+                <p className="text-destructive text-xs mt-1.5 ml-3 font-medium">
+                  {errors.icon.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4 mt-2 border-t border-border/50">
+              {mode === "edit" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteAlertOpen(true)}
                   disabled={isSubmitting}
-                  className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--primary)/0.9)] disabled:opacity-60"
+                  className="h-12 w-12 shrink-0 rounded-full border-destructive/30 text-destructive hover:bg-destructive/10"
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : null}
-                  {mode === "create" ? "Create subcategory" : "Save changes"}
-                </button>
-
-                {mode === "edit" && (
-                  <button
-                    type="button"
-                    onClick={() => setDeleteAlertOpen(true)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--destructive)/0.4)] text-destructive transition-colors hover:bg-[hsl(var(--destructive)/0.08)]"
-                    aria-label="Delete subcategory"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+                className="flex-1 h-12 rounded-full font-semibold border-border/60 hover:bg-muted"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 h-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:-translate-y-px transition-all"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : mode === "create" ? (
+                  "Add Subcategory"
+                ) : (
+                  "Save Changes"
                 )}
-              </div>
-            </FieldGroup>
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
 
       {mode === "edit" && (
         <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="border-border/50">
             <AlertDialogHeader>
               <AlertDialogTitle>
                 Delete &quot;{subcategory?.name}&quot;?
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                {countLoading
-                  ? "Checking affected items..."
-                  : affectedCount > 0
-                    ? `This will affect ${affectedCount} item(s). Continue?`
-                    : "This subcategory has no items in it. This action cannot be undone."}
+              <AlertDialogDescription className="leading-relaxed">
+                {countLoading ? (
+                  "Checking subcategory status..."
+                ) : affectedCount > 0 ? (
+                  <span className="text-destructive font-medium">
+                    This subcategory is linked to {affectedCount} item(s).
+                    Please remove it from those items before deleting.
+                  </span>
+                ) : (
+                  "This subcategory is unused and can be safely deleted. It will be moved to the Trash."
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="mt-4">
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-[hsl(var(--destructive)/0.9)]"
+                disabled={affectedCount > 0}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
               >
-                Delete
+                Move to Trash
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

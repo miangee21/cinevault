@@ -14,7 +14,7 @@ export function useMediaItems(
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.mediaItems.getMediaItemsPaginated,
     { categoryId, searchTerm: searchTerm || undefined, sortOption },
-    { initialNumItems: 20 },
+    { initialNumItems: 10 },
   );
 
   return {

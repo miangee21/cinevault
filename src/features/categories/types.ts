@@ -8,6 +8,8 @@ export interface Category {
   userId: Id<"users">;
   name: string;
   icon: string;
+  itemCount?: number;
+  deletedAt?: number;
 }
 
 export interface Subcategory {
@@ -17,6 +19,8 @@ export interface Subcategory {
   categoryId: Id<"categories">;
   name: string;
   icon: string;
+  itemCount?: number;
+  deletedAt?: number;
 }
 
 export const categoryFormSchema = z.object({

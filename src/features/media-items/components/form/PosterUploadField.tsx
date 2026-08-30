@@ -1,7 +1,7 @@
 //src/features/media-items/components/form/PosterUploadField.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ImagePlus, X } from "lucide-react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -68,8 +68,8 @@ export function PosterUploadField({
               className="h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/50 group-hover:opacity-100">
-              <ImagePlus className="size-5 text-white" />
+            <div className="absolute inset-0 flex items-center justify-center bg-overlay/0 opacity-0 transition-all group-hover:bg-overlay/50 group-hover:opacity-100">
+              <ImagePlus className="size-5 text-overlay-foreground" />
             </div>
           </>
         ) : (
@@ -86,7 +86,7 @@ export function PosterUploadField({
         <button
           type="button"
           onClick={handleRemove}
-          className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-destructive text-white shadow-md transition-transform hover:scale-110"
+          className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md transition-transform hover:scale-110"
           aria-label="Remove poster"
         >
           <X className="size-3.5" />

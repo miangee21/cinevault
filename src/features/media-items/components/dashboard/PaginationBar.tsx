@@ -10,14 +10,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
-export const PAGE_SIZE_OPTIONS = [
-  "10",
-  "20",
-  "30",
-  "50",
-  "100",
-  "all",
-] as const;
+export const PAGE_SIZE_OPTIONS = ["5", "10", "20", "30", "50", "100"] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 interface PaginationBarProps {
@@ -44,7 +37,7 @@ function PageSizeSelect({
       <SelectContent>
         {PAGE_SIZE_OPTIONS.map((opt) => (
           <SelectItem key={opt} value={opt}>
-            {opt === "all" ? "All" : `${opt} / page`}
+            {`${opt} / page`}
           </SelectItem>
         ))}
       </SelectContent>
@@ -60,15 +53,6 @@ export function PaginationBar({
   onPageSizeChange,
   isLoadingMore,
 }: PaginationBarProps) {
-  if (pageSize === "all") {
-    return (
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <span className="text-xs text-muted-foreground">Showing all items</span>
-        <PageSizeSelect value={pageSize} onChange={onPageSizeChange} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex items-center justify-between gap-3 pt-2">
       <PageSizeSelect value={pageSize} onChange={onPageSizeChange} />
