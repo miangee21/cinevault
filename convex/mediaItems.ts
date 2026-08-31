@@ -2,7 +2,6 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
-import { api } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 const sortOptionValidator = v.union(
   v.literal("name_asc"),
@@ -12,7 +11,7 @@ const sortOptionValidator = v.union(
 );
 
 function validateRating(rating: number | undefined) {
-  if (rating === undefined) return;
+  if (rating === undefined || rating === 0) return;
   if (rating < 0.5 || rating > 10) {
     throw new Error("Rating must be between 0.5 and 10");
   }
@@ -32,7 +31,7 @@ const mediaItemFields = {
   title: v.string(),
   kind: v.union(v.literal("movie"), v.literal("series")),
   posterUrl: v.optional(v.string()),
-  posterPublicId: v.optional(v.string()),
+  posterStorageId: v.optional(v.id("_storage")),
   totalDurationSeconds: v.optional(v.number()),
   seasons: v.optional(v.array(seasonValidator)),
   status: v.union(
@@ -82,7 +81,8 @@ export const getMediaItemsPaginated = query({
         .query("mediaItems")
         .withSearchIndex("search_title", (q) =>
           q.search("title", term).eq("userId", userId),
-        );
+        )
+        .filter((q) => q.eq(q.field("deletedAt"), undefined));
 
       if (args.categoryId) {
         searchQuery = searchQuery.filter((q) =>
@@ -104,7 +104,11 @@ export const getMediaItemsPaginated = query({
         : ctx.db
             .query("mediaItems")
             .withIndex("by_user_and_title", (q) => q.eq("userId", userId));
-      return await baseQuery.order(order).paginate(args.paginationOpts);
+
+      return await baseQuery
+        .filter((q) => q.eq(q.field("deletedAt"), undefined))
+        .order(order)
+        .paginate(args.paginationOpts);
     }
 
     const order = args.sortOption === "rating_asc" ? "asc" : "desc";
@@ -117,7 +121,11 @@ export const getMediaItemsPaginated = query({
       : ctx.db
           .query("mediaItems")
           .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
-    return await baseQuery.order(order).paginate(args.paginationOpts);
+
+    return await baseQuery
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .order(order)
+      .paginate(args.paginationOpts);
   },
 });
 
@@ -168,10 +176,16 @@ export const createMediaItem = mutation({
       throw new Error("Category not found");
     }
 
+    let posterUrl = args.posterUrl;
+    if (args.posterStorageId) {
+      posterUrl = (await ctx.storage.getUrl(args.posterStorageId)) ?? undefined;
+    }
+
     const mediaItemId = await ctx.db.insert("mediaItems", {
       ...args,
       userId,
       title,
+      posterUrl,
     });
 
     await ctx.db.patch(args.categoryId, {
@@ -198,7 +212,7 @@ export const updateMediaItem = mutation({
     title: v.optional(v.string()),
     kind: v.optional(v.union(v.literal("movie"), v.literal("series"))),
     posterUrl: v.optional(v.string()),
-    posterPublicId: v.optional(v.string()),
+    posterStorageId: v.optional(v.id("_storage")),
     totalDurationSeconds: v.optional(v.number()),
     seasons: v.optional(v.array(seasonValidator)),
     status: v.optional(
@@ -227,6 +241,37 @@ export const updateMediaItem = mutation({
     const { id, ...updates } = args;
     const item = await ctx.db.get(id);
     if (!item || item.userId !== userId) throw new Error("Item not found");
+    if (updates.hasHard === false) updates.hardDescription = undefined;
+    if (updates.hasCloud === false) updates.cloudDescription = undefined;
+    if (updates.rating === 0) {
+      updates.rating = undefined;
+      updates.review = undefined;
+    }
+
+    const currentStatus = updates.status ?? item.status;
+    if (currentStatus !== "in_progress") {
+      updates.progressDescription = undefined;
+      updates.progressSeconds = undefined;
+      updates.progressSeason = undefined;
+      updates.progressEpisode = undefined;
+    }
+
+    let finalPosterUrl = updates.posterUrl;
+    if (updates.posterStorageId) {
+      finalPosterUrl =
+        (await ctx.storage.getUrl(updates.posterStorageId)) ?? undefined;
+
+      // Soft-cleanup: Delete old image if it was replaced
+      if (
+        item.posterStorageId &&
+        item.posterStorageId !== updates.posterStorageId
+      ) {
+        await ctx.storage.delete(item.posterStorageId);
+      }
+    }
+    if (finalPosterUrl) {
+      updates.posterUrl = finalPosterUrl;
+    }
 
     if (updates.categoryId && updates.categoryId !== item.categoryId) {
       const oldCategory = await ctx.db.get(item.categoryId);
@@ -293,11 +338,8 @@ export const deleteMediaItem = mutation({
     const item = await ctx.db.get(args.id);
     if (!item || item.userId !== userId) throw new Error("Item not found");
 
-    if (item.posterPublicId) {
-      await ctx.scheduler.runAfter(0, api.cloudinary.deleteCloudinaryImage, {
-        publicId: item.posterPublicId,
-      });
-    }
+    // Skip if already soft-deleted
+    if (item.deletedAt !== undefined) return;
 
     const category = await ctx.db.get(item.categoryId);
 
@@ -317,6 +359,7 @@ export const deleteMediaItem = mutation({
       }
     }
 
-    await ctx.db.delete(args.id);
+    // Soft delete: keep the item in the DB but mark it as deleted
+    await ctx.db.patch(args.id, { deletedAt: Date.now() });
   },
 });

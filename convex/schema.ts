@@ -37,7 +37,7 @@ export default defineSchema({
     title: v.string(),
     kind: v.union(v.literal("movie"), v.literal("series")),
     posterUrl: v.optional(v.string()),
-    posterPublicId: v.optional(v.string()),
+    posterStorageId: v.optional(v.id("_storage")),
 
     // --- Movie-only ---
     totalDurationSeconds: v.optional(v.number()),
@@ -75,6 +75,7 @@ export default defineSchema({
 
     // --- Dashboard preference ---
     hideDeleteFromDashboard: v.optional(v.boolean()),
+    deletedAt: v.optional(v.number()), // For Soft Delete
   })
     .index("by_user", ["userId"])
     .index("by_user_and_category", ["userId", "categoryId"])
