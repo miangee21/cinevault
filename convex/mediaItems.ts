@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+
+function generateSortTitle(title: string) {
+  return title.toLowerCase().replace(/\d+/g, (match) => match.padStart(5, "0"));
+}
+
 const sortOptionValidator = v.union(
   v.literal("name_asc"),
   v.literal("name_desc"),
@@ -67,6 +72,7 @@ export const getMediaItem = query({
 export const getMediaItemsPaginated = query({
   args: {
     categoryId: v.optional(v.id("categories")),
+    subcategoryId: v.optional(v.id("subcategories")),
     searchTerm: v.optional(v.string()),
     sortOption: sortOptionValidator,
     paginationOpts: paginationOptsValidator,
@@ -76,6 +82,64 @@ export const getMediaItemsPaginated = query({
     if (!userId) return { page: [], isDone: true, continueCursor: "" };
 
     const term = args.searchTerm?.trim();
+    const isNameSort =
+      args.sortOption === "name_asc" || args.sortOption === "name_desc";
+    const order =
+      args.sortOption === "name_asc" || args.sortOption === "rating_asc"
+        ? "asc"
+        : "desc";
+
+    // --- SCENARIO 1: SUBCATEGORY FILTER ACTIVE (Uses Junction Table) ---
+    if (args.subcategoryId) {
+      let paginatedJunction;
+
+      if (term && term.length > 0) {
+        paginatedJunction = await ctx.db
+          .query("itemSubcategories")
+          .withSearchIndex("search_title", (q) =>
+            q
+              .search("title", term)
+              .eq("userId", userId)
+              .eq("subcategoryId", args.subcategoryId!),
+          )
+          .filter((q) => q.eq(q.field("deletedAt"), undefined))
+          .paginate(args.paginationOpts);
+      } else {
+        if (isNameSort) {
+          paginatedJunction = await ctx.db
+            .query("itemSubcategories")
+            .withIndex("by_user_subcategory_and_sortTitle", (q) =>
+              q.eq("userId", userId).eq("subcategoryId", args.subcategoryId!),
+            )
+            .filter((q) => q.eq(q.field("deletedAt"), undefined))
+            .order(order)
+            .paginate(args.paginationOpts);
+        } else {
+          paginatedJunction = await ctx.db
+            .query("itemSubcategories")
+            .withIndex("by_user_subcategory_and_rating", (q) =>
+              q.eq("userId", userId).eq("subcategoryId", args.subcategoryId!),
+            )
+            .filter((q) => q.eq(q.field("deletedAt"), undefined))
+            .order(order)
+            .paginate(args.paginationOpts);
+        }
+      }
+
+      const pageItems = await Promise.all(
+        paginatedJunction.page.map(
+          async (j) => await ctx.db.get(j.mediaItemId),
+        ),
+      );
+
+      return {
+        page: pageItems.filter(Boolean),
+        isDone: paginatedJunction.isDone,
+        continueCursor: paginatedJunction.continueCursor,
+      };
+    }
+
+    // --- SCENARIO 2: NO SUBCATEGORY (Uses Main Table) ---
     if (term && term.length > 0) {
       let searchQuery = ctx.db
         .query("mediaItems")
@@ -89,38 +153,36 @@ export const getMediaItemsPaginated = query({
           q.eq(q.field("categoryId"), args.categoryId),
         );
       }
-
       return await searchQuery.paginate(args.paginationOpts);
     }
 
-    if (args.sortOption === "name_asc" || args.sortOption === "name_desc") {
-      const order = args.sortOption === "name_asc" ? "asc" : "desc";
-      const baseQuery = args.categoryId
-        ? ctx.db
-            .query("mediaItems")
-            .withIndex("by_user_category_and_title", (q) =>
-              q.eq("userId", userId).eq("categoryId", args.categoryId!),
-            )
-        : ctx.db
-            .query("mediaItems")
-            .withIndex("by_user_and_title", (q) => q.eq("userId", userId));
+    let baseQuery;
 
-      return await baseQuery
-        .filter((q) => q.eq(q.field("deletedAt"), undefined))
-        .order(order)
-        .paginate(args.paginationOpts);
-    }
-
-    const order = args.sortOption === "rating_asc" ? "asc" : "desc";
-    const baseQuery = args.categoryId
-      ? ctx.db
+    if (isNameSort) {
+      if (args.categoryId) {
+        baseQuery = ctx.db
+          .query("mediaItems")
+          .withIndex("by_user_category_and_sortTitle", (q) =>
+            q.eq("userId", userId).eq("categoryId", args.categoryId!),
+          );
+      } else {
+        baseQuery = ctx.db
+          .query("mediaItems")
+          .withIndex("by_user_and_sortTitle", (q) => q.eq("userId", userId));
+      }
+    } else {
+      if (args.categoryId) {
+        baseQuery = ctx.db
           .query("mediaItems")
           .withIndex("by_user_category_and_rating", (q) =>
             q.eq("userId", userId).eq("categoryId", args.categoryId!),
-          )
-      : ctx.db
+          );
+      } else {
+        baseQuery = ctx.db
           .query("mediaItems")
           .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
+      }
+    }
 
     return await baseQuery
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
@@ -185,6 +247,7 @@ export const createMediaItem = mutation({
       ...args,
       userId,
       title,
+      sortTitle: generateSortTitle(title),
       posterUrl,
     });
 
@@ -198,6 +261,19 @@ export const createMediaItem = mutation({
       if (sub) {
         await ctx.db.patch(subId, { itemCount: (sub.itemCount ?? 0) + 1 });
       }
+    }
+
+    // Sync Junction Table
+    for (const subId of args.subcategoryIds) {
+      await ctx.db.insert("itemSubcategories", {
+        userId,
+        mediaItemId,
+        categoryId: args.categoryId,
+        subcategoryId: subId,
+        title,
+        sortTitle: generateSortTitle(title),
+        rating: args.rating,
+      });
     }
 
     return mediaItemId;
@@ -320,12 +396,48 @@ export const updateMediaItem = mutation({
       }
     }
 
-    if (updates.title !== undefined && updates.title.trim().length < 1) {
-      throw new Error("Title is required");
+    if (updates.title !== undefined) {
+      if (updates.title.trim().length < 1) throw new Error("Title is required");
+      (updates as typeof updates & { sortTitle?: string }).sortTitle =
+        generateSortTitle(updates.title);
     }
     if (updates.rating !== undefined) validateRating(updates.rating as number);
 
     await ctx.db.patch(id, updates);
+
+    // Sync Junction Table cleanly
+    const existingJunctions = await ctx.db
+      .query("itemSubcategories")
+      .withIndex("by_mediaItem", (q) => q.eq("mediaItemId", id))
+      .collect();
+
+    for (const j of existingJunctions) {
+      await ctx.db.delete(j._id);
+    }
+
+    const finalTitle =
+      updates.title !== undefined ? updates.title.trim() : item.title;
+    const finalSortTitle = generateSortTitle(finalTitle);
+    const finalRating =
+      updates.rating !== undefined ? updates.rating : item.rating;
+    const finalCategoryId =
+      updates.categoryId !== undefined ? updates.categoryId : item.categoryId;
+    const finalSubcategoryIds =
+      updates.subcategoryIds !== undefined
+        ? updates.subcategoryIds
+        : item.subcategoryIds;
+
+    for (const subId of finalSubcategoryIds) {
+      await ctx.db.insert("itemSubcategories", {
+        userId,
+        mediaItemId: id,
+        categoryId: finalCategoryId,
+        subcategoryId: subId,
+        title: finalTitle,
+        sortTitle: finalSortTitle,
+        rating: finalRating,
+      });
+    }
   },
 });
 
@@ -360,6 +472,16 @@ export const deleteMediaItem = mutation({
     }
 
     // Soft delete: keep the item in the DB but mark it as deleted
-    await ctx.db.patch(args.id, { deletedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(args.id, { deletedAt: now });
+
+    const junctions = await ctx.db
+      .query("itemSubcategories")
+      .withIndex("by_mediaItem", (q) => q.eq("mediaItemId", args.id))
+      .collect();
+
+    for (const j of junctions) {
+      await ctx.db.patch(j._id, { deletedAt: now });
+    }
   },
 });

@@ -76,11 +76,16 @@ export default defineSchema({
     // --- Dashboard preference ---
     hideDeleteFromDashboard: v.optional(v.boolean()),
     deletedAt: v.optional(v.number()), // For Soft Delete
+    sortTitle: v.string(), // Added for Natural A-Z / 1-10 Sorting
   })
     .index("by_user", ["userId"])
     .index("by_user_and_category", ["userId", "categoryId"])
-    .index("by_user_and_title", ["userId", "title"])
-    .index("by_user_category_and_title", ["userId", "categoryId", "title"])
+    .index("by_user_and_sortTitle", ["userId", "sortTitle"])
+    .index("by_user_category_and_sortTitle", [
+      "userId",
+      "categoryId",
+      "sortTitle",
+    ])
     .index("by_user_and_rating", ["userId", "rating"])
     .index("by_user_category_and_rating", ["userId", "categoryId", "rating"])
     .searchIndex("search_title", {
@@ -92,4 +97,31 @@ export default defineSchema({
     key: v.string(),
     value: v.boolean(),
   }).index("by_key", ["key"]),
+
+  // --- Junction Table for Professional DB-Level Subcategory Filtering ---
+  itemSubcategories: defineTable({
+    userId: v.id("users"),
+    mediaItemId: v.id("mediaItems"),
+    categoryId: v.id("categories"),
+    subcategoryId: v.id("subcategories"),
+    title: v.string(),
+    sortTitle: v.string(),
+    rating: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_user_subcategory_and_sortTitle", [
+      "userId",
+      "subcategoryId",
+      "sortTitle",
+    ])
+    .index("by_user_subcategory_and_rating", [
+      "userId",
+      "subcategoryId",
+      "rating",
+    ])
+    .index("by_mediaItem", ["mediaItemId"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["userId", "subcategoryId"],
+    }),
 });

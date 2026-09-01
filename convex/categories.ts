@@ -9,12 +9,19 @@ export const getCategories = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
 
-    return await ctx.db
+    const categories = await ctx.db
       .query("categories")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("deletedAt"), undefined)) // Skip trashed items
-      .order("desc")
       .collect();
+
+    // Professional Natural Sort (1, 2, 10, A, B, Z)
+    return categories.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
   },
 });
 

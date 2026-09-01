@@ -1,13 +1,14 @@
 //src/features/media-items/components/dashboard/MediaTable.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, Search as SearchIcon, List, Grid2X2 } from "lucide-react";
 import { Table, TableBody } from "@/shared/components/ui/table";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { TypeTabs } from "./TypeTabs";
-import { SearchBar } from "./SearchBar";
+import { SearchBar } from "@/shared/components/SearchBar";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import { SortDropdown } from "./SortDropdown";
 import { PaginationBar, type PageSize } from "./PaginationBar";
 import { MediaTableHeader } from "./MediaTableHeader";
@@ -19,6 +20,7 @@ import { useColumnWidths } from "../../hooks/useColumnWidths";
 import { useDashboardPreferences } from "@/shared/hooks/useDashboardPreferences";
 import { type SortOption } from "../../utils/sortMediaItems";
 import { type Id } from "@convex/_generated/dataModel";
+import { type MediaItem } from "../../types";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 
@@ -26,76 +28,93 @@ export function MediaTable() {
   const [categoryFilter, setCategoryFilter] = useState<
     Id<"categories"> | "all"
   >("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [subcategoryFilter, setSubcategoryFilter] = useState<
+    Id<"subcategories"> | "all"
+  >("all");
+  const [searchInput, setSearchInput] = useState("");
+  const searchTerm = useDebounce(searchInput, 300);
   const [sortOption, setSortOption] = useState<SortOption>("name_asc");
   const [pageSize, setPageSize] = useState<PageSize>("10");
   const [currentPage, setCurrentPage] = useState(1);
   const { widths, resizeColumn } = useColumnWidths();
   const { showDeleteButton, viewMode, setViewMode } = useDashboardPreferences();
-
   const itemCounts = useQuery(api.mediaItems.getMediaItemCounts);
+  const pageSizeNumber = Number(pageSize);
 
-  const { items, status, loadMore } = useMediaItems(
+  const {
+    items: pageItems,
+    status,
+    isLoading,
+  } = useMediaItems(
     categoryFilter === "all" ? undefined : categoryFilter,
+    subcategoryFilter === "all" ? undefined : subcategoryFilter,
     searchTerm,
     sortOption,
+    pageSizeNumber,
+    currentPage,
   );
 
-  // Items now arrive pre-sorted from Convex — no client-side sort needed.
-  const sortedItems = items;
   const isSearching = searchTerm.trim().length > 0;
-  const isLoadingFirstPage = status === "LoadingFirstPage";
-  const pageSizeNumber = Number(pageSize);
+  const isLoadingFirstPage = isLoading && currentPage === 1;
 
   const [prevFilters, setPrevFilters] = useState({
     categoryFilter,
+    subcategoryFilter,
     searchTerm,
     pageSize,
     sortOption,
   });
   if (
     categoryFilter !== prevFilters.categoryFilter ||
+    subcategoryFilter !== prevFilters.subcategoryFilter ||
     searchTerm !== prevFilters.searchTerm ||
     pageSize !== prevFilters.pageSize ||
     sortOption !== prevFilters.sortOption
   ) {
-    setPrevFilters({ categoryFilter, searchTerm, pageSize, sortOption });
+    setPrevFilters({
+      categoryFilter,
+      subcategoryFilter,
+      searchTerm,
+      pageSize,
+      sortOption,
+    });
     setCurrentPage(1);
   }
 
-  useEffect(() => {
-    const neededCount = currentPage * pageSizeNumber;
-    if (sortedItems.length < neededCount && status === "CanLoadMore") {
-      loadMore(pageSizeNumber);
-    }
-  }, [pageSizeNumber, currentPage, sortedItems.length, status, loadMore]);
-
-  const pageItems = sortedItems.slice(
-    (currentPage - 1) * pageSizeNumber,
-    currentPage * pageSizeNumber,
-  );
-
-  const totalItemsCount = isSearching
-    ? sortedItems.length
-    : categoryFilter === "all"
+  const totalItemsCount =
+    categoryFilter === "all"
       ? (itemCounts?.total ?? 0)
       : (itemCounts?.byCategory[categoryFilter] ?? 0);
 
   const totalPages = Math.max(
     1,
     isSearching
-      ? Math.ceil(sortedItems.length / pageSizeNumber) +
-          (status === "CanLoadMore" ? 1 : 0)
+      ? currentPage + (status === "CanLoadMore" ? 1 : 0) // Dynamic pages for search
       : Math.ceil(totalItemsCount / pageSizeNumber),
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <TypeTabs value={categoryFilter} onChange={setCategoryFilter} />
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1">
+          <TypeTabs
+            value={categoryFilter}
+            onChange={(val) => {
+              setCategoryFilter(val);
+              setSubcategoryFilter("all");
+            }}
+            subcategoryValue={subcategoryFilter}
+            onSubcategoryChange={setSubcategoryFilter}
+          />
+        </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <SearchBar onSearch={setSearchTerm} />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <SearchBar
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onClear={() => setSearchInput("")}
+            placeholder="Search your vault..."
+          />
 
           <div className="flex h-10 items-center rounded-full border border-border bg-[hsl(var(--foreground)/0.03)] p-1">
             <button
@@ -155,7 +174,7 @@ export function MediaTable() {
             <Skeleton key={i} className="h-14 w-full rounded-lg" />
           ))}
         </div>
-      ) : sortedItems.length === 0 ? (
+      ) : pageItems.length === 0 ? (
         <EmptyState
           icon={isSearching ? SearchIcon : Plus}
           title={isSearching ? "No results found" : "No items yet"}
@@ -186,26 +205,32 @@ export function MediaTable() {
                 />
 
                 <TableBody>
-                  {pageItems.map((item, index) => (
-                    <MediaTableRow
-                      key={item._id}
-                      item={item}
-                      index={index}
-                      showDeleteButton={showDeleteButton}
-                    />
-                  ))}
+                  {pageItems.map((item, index) => {
+                    if (!item) return null;
+                    return (
+                      <MediaTableRow
+                        key={item._id}
+                        item={item as unknown as MediaItem}
+                        index={index}
+                        showDeleteButton={showDeleteButton}
+                      />
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-              {pageItems.map((item) => (
-                <MediaGridCard
-                  key={item._id}
-                  item={item}
-                  showActionsButton={showDeleteButton}
-                />
-              ))}
+              {pageItems.map((item) => {
+                if (!item) return null;
+                return (
+                  <MediaGridCard
+                    key={item._id}
+                    item={item as unknown as MediaItem}
+                    showActionsButton={showDeleteButton}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -215,7 +240,7 @@ export function MediaTable() {
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
-            isLoadingMore={status === "LoadingMore"}
+            isLoadingMore={isLoading && currentPage > 1}
           />
         </>
       )}

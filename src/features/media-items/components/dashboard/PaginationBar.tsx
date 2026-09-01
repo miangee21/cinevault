@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
-export const PAGE_SIZE_OPTIONS = ["5", "10", "20", "30", "50", "100"] as const;
+export const PAGE_SIZE_OPTIONS = ["5", "10", "20", "30", "50"] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 interface PaginationBarProps {

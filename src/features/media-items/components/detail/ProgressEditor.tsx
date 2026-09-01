@@ -215,7 +215,7 @@ export function ProgressEditor({ item }: { item: MediaItem }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <StatusBadge status={item.status} />
+        <StatusBadge item={item} />
         {progress !== null && (
           <span className="text-sm text-muted-foreground">
             {progress}% complete

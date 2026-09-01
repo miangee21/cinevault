@@ -26,12 +26,17 @@ export function DeleteItemDialog({
   const handleConfirm = async () => {
     try {
       await deleteMediaItem({ id: itemId });
-      toast.success(`"${title}" deleted`);
+      toast.success("Moved to Trash", {
+        description: `"${title}" has been moved to the recycle bin.`,
+      });
       onDeleted?.();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn't delete this item",
-      );
+      toast.error("Action Failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not move this item to trash.",
+      });
       throw error;
     }
   };
@@ -49,9 +54,9 @@ export function DeleteItemDialog({
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title={`Delete "${title}"?`}
-        description="This permanently removes this item, including its poster, from your vault. This action cannot be undone."
-        confirmLabel="Delete"
+        title={`Move "${title}" to Trash?`}
+        description="This item will be moved to the recycle bin. You can easily restore it later from the Trash page."
+        confirmLabel="Move to Trash"
         variant="destructive"
         onConfirm={handleConfirm}
       />

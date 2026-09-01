@@ -5,6 +5,8 @@ import {
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import { cn } from "@/shared/lib/utils";
+import { type MediaItem } from "../../types";
+import { formatDuration } from "../../utils/formatDuration";
 
 const STATUS_CONFIG = {
   not_started: {
@@ -25,12 +27,11 @@ const STATUS_CONFIG = {
 } as const;
 
 interface StatusBadgeProps {
-  status: "not_started" | "in_progress" | "completed";
-  progressDescription?: string;
+  item: MediaItem;
 }
 
-export function StatusBadge({ status, progressDescription }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status];
+export function StatusBadge({ item }: StatusBadgeProps) {
+  const config = STATUS_CONFIG[item.status];
 
   const badge = (
     <span
@@ -44,16 +45,41 @@ export function StatusBadge({ status, progressDescription }: StatusBadgeProps) {
     </span>
   );
 
-  if (status === "in_progress" && progressDescription) {
-    return (
-      <Tooltip>
-        <TooltipTrigger
-          render={<span className="inline-block">{badge}</span>}
-        />
-        <TooltipContent>{progressDescription}</TooltipContent>
-      </Tooltip>
-    );
+  let tooltipText: string = config.label; // Explicitly typed as string for dynamic values
+
+  if (item.status === "in_progress") {
+    const parts = [];
+
+    // Movie logic (Hours/Mins)
+    if (item.kind === "movie" && item.progressSeconds) {
+      parts.push(formatDuration(item.progressSeconds));
+    }
+    // Series logic (S, E)
+    else if (item.kind === "series") {
+      if (item.progressSeason) parts.push(`S${item.progressSeason}`);
+      if (item.progressEpisode) parts.push(`E${item.progressEpisode}`);
+    }
+
+    // Description at the end
+    if (item.progressDescription?.trim()) {
+      parts.push(item.progressDescription.trim());
+    }
+
+    if (parts.length > 0) {
+      tooltipText = parts.join(", ");
+    } else {
+      tooltipText = "In Progress";
+    }
   }
 
-  return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span className="inline-block cursor-default">{badge}</span>}
+      />
+      <TooltipContent className="max-w-xs capitalize font-medium">
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
+  );
 }

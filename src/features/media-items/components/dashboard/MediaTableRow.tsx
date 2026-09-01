@@ -91,10 +91,7 @@ export function MediaTableRow({
       </TableCell>
 
       <TableCell>
-        <StatusBadge
-          status={item.status}
-          progressDescription={item.progressDescription}
-        />
+        <StatusBadge item={item} />
       </TableCell>
 
       <TableCell>

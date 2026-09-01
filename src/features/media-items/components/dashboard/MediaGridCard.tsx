@@ -27,13 +27,13 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
       onClick={() => router.push(`/item/${item._id}`)}
       className="group cursor-pointer overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
     >
-      <div className="relative aspect-2/3 overflow-hidden bg-[hsl(var(--foreground)/0.06)]">
+      <div className="relative aspect-3/4 overflow-hidden bg-[hsl(var(--foreground)/0.06)]">
         {item.posterUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={item.posterUrl}
             alt={item.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -100,18 +100,9 @@ export function MediaGridCard({ item, showActionsButton }: MediaGridCardProps) {
         </div>
 
         <div className="space-y-1.5">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <div onClick={(e) => e.stopPropagation()} className="w-fit">
-                  <StatusBadge status={item.status} />
-                </div>
-              }
-            />
-            <TooltipContent className="max-w-xs">
-              {item.progressDescription?.trim() || "No status description"}
-            </TooltipContent>
-          </Tooltip>
+          <div onClick={(e) => e.stopPropagation()} className="w-fit">
+            <StatusBadge item={item} />
+          </div>
 
           <Tooltip>
             <TooltipTrigger
