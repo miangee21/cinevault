@@ -47,7 +47,7 @@ export function useMediaItems(
   const currentCursor =
     cursors[currentPage] !== undefined ? cursors[currentPage] : null;
 
-  const queryResult = useQuery(api.mediaItems.getMediaItemsPaginated, {
+  const queryResult = useQuery(api.mediaItemQueries.getMediaItemsPaginated, {
     categoryId,
     subcategoryId,
     searchTerm: searchTerm || undefined,

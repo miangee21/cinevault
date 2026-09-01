@@ -1,19 +1,11 @@
-//convex/mediaItems.ts
+//convex/mediaItemMutations.ts
 import { v } from "convex/values";
-import { paginationOptsValidator } from "convex/server";
-import { mutation, query } from "./_generated/server";
+import { mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 function generateSortTitle(title: string) {
   return title.toLowerCase().replace(/\d+/g, (match) => match.padStart(5, "0"));
 }
-
-const sortOptionValidator = v.union(
-  v.literal("name_asc"),
-  v.literal("name_desc"),
-  v.literal("rating_asc"),
-  v.literal("rating_desc"),
-);
 
 function validateRating(rating: number | undefined) {
   if (rating === undefined || rating === 0) return;
@@ -57,172 +49,6 @@ const mediaItemFields = {
   hideDeleteFromDashboard: v.optional(v.boolean()),
 };
 
-export const getMediaItem = query({
-  args: { id: v.id("mediaItems") },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-
-    const item = await ctx.db.get(args.id);
-    if (!item || item.userId !== userId) return null;
-    return item;
-  },
-});
-
-export const getMediaItemsPaginated = query({
-  args: {
-    categoryId: v.optional(v.id("categories")),
-    subcategoryId: v.optional(v.id("subcategories")),
-    searchTerm: v.optional(v.string()),
-    sortOption: sortOptionValidator,
-    paginationOpts: paginationOptsValidator,
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return { page: [], isDone: true, continueCursor: "" };
-
-    const term = args.searchTerm?.trim();
-    const isNameSort =
-      args.sortOption === "name_asc" || args.sortOption === "name_desc";
-    const order =
-      args.sortOption === "name_asc" || args.sortOption === "rating_asc"
-        ? "asc"
-        : "desc";
-
-    // --- SCENARIO 1: SUBCATEGORY FILTER ACTIVE (Uses Junction Table) ---
-    if (args.subcategoryId) {
-      let paginatedJunction;
-
-      if (term && term.length > 0) {
-        paginatedJunction = await ctx.db
-          .query("itemSubcategories")
-          .withSearchIndex("search_title", (q) =>
-            q
-              .search("title", term)
-              .eq("userId", userId)
-              .eq("subcategoryId", args.subcategoryId!),
-          )
-          .filter((q) => q.eq(q.field("deletedAt"), undefined))
-          .paginate(args.paginationOpts);
-      } else {
-        if (isNameSort) {
-          paginatedJunction = await ctx.db
-            .query("itemSubcategories")
-            .withIndex("by_user_subcategory_and_sortTitle", (q) =>
-              q.eq("userId", userId).eq("subcategoryId", args.subcategoryId!),
-            )
-            .filter((q) => q.eq(q.field("deletedAt"), undefined))
-            .order(order)
-            .paginate(args.paginationOpts);
-        } else {
-          paginatedJunction = await ctx.db
-            .query("itemSubcategories")
-            .withIndex("by_user_subcategory_and_rating", (q) =>
-              q.eq("userId", userId).eq("subcategoryId", args.subcategoryId!),
-            )
-            .filter((q) => q.eq(q.field("deletedAt"), undefined))
-            .order(order)
-            .paginate(args.paginationOpts);
-        }
-      }
-
-      const pageItems = await Promise.all(
-        paginatedJunction.page.map(
-          async (j) => await ctx.db.get(j.mediaItemId),
-        ),
-      );
-
-      return {
-        page: pageItems.filter(Boolean),
-        isDone: paginatedJunction.isDone,
-        continueCursor: paginatedJunction.continueCursor,
-      };
-    }
-
-    // --- SCENARIO 2: NO SUBCATEGORY (Uses Main Table) ---
-    if (term && term.length > 0) {
-      let searchQuery = ctx.db
-        .query("mediaItems")
-        .withSearchIndex("search_title", (q) =>
-          q.search("title", term).eq("userId", userId),
-        )
-        .filter((q) => q.eq(q.field("deletedAt"), undefined));
-
-      if (args.categoryId) {
-        searchQuery = searchQuery.filter((q) =>
-          q.eq(q.field("categoryId"), args.categoryId),
-        );
-      }
-      return await searchQuery.paginate(args.paginationOpts);
-    }
-
-    let baseQuery;
-
-    if (isNameSort) {
-      if (args.categoryId) {
-        baseQuery = ctx.db
-          .query("mediaItems")
-          .withIndex("by_user_category_and_sortTitle", (q) =>
-            q.eq("userId", userId).eq("categoryId", args.categoryId!),
-          );
-      } else {
-        baseQuery = ctx.db
-          .query("mediaItems")
-          .withIndex("by_user_and_sortTitle", (q) => q.eq("userId", userId));
-      }
-    } else {
-      if (args.categoryId) {
-        baseQuery = ctx.db
-          .query("mediaItems")
-          .withIndex("by_user_category_and_rating", (q) =>
-            q.eq("userId", userId).eq("categoryId", args.categoryId!),
-          );
-      } else {
-        baseQuery = ctx.db
-          .query("mediaItems")
-          .withIndex("by_user_and_rating", (q) => q.eq("userId", userId));
-      }
-    }
-
-    return await baseQuery
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
-      .order(order)
-      .paginate(args.paginationOpts);
-  },
-});
-
-export const getMediaItemCounts = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return {
-        total: 0,
-        byCategory: {},
-      };
-    }
-
-    const categories = await ctx.db
-      .query("categories")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const byCategory: Record<string, number> = {};
-    let total = 0;
-
-    for (const category of categories) {
-      const count = category.itemCount ?? 0;
-      byCategory[category._id] = count;
-      total += count;
-    }
-
-    return {
-      total,
-      byCategory,
-    };
-  },
-});
-
 export const createMediaItem = mutation({
   args: mediaItemFields,
   handler: async (ctx, args) => {
@@ -255,7 +81,6 @@ export const createMediaItem = mutation({
       itemCount: (category.itemCount ?? 0) + 1,
     });
 
-    // Auto-increment subcategory counts
     for (const subId of args.subcategoryIds) {
       const sub = await ctx.db.get(subId);
       if (sub) {
@@ -263,7 +88,6 @@ export const createMediaItem = mutation({
       }
     }
 
-    // Sync Junction Table
     for (const subId of args.subcategoryIds) {
       await ctx.db.insert("itemSubcategories", {
         userId,
@@ -337,7 +161,6 @@ export const updateMediaItem = mutation({
       finalPosterUrl =
         (await ctx.storage.getUrl(updates.posterStorageId)) ?? undefined;
 
-      // Soft-cleanup: Delete old image if it was replaced
       if (
         item.posterStorageId &&
         item.posterStorageId !== updates.posterStorageId
@@ -368,14 +191,12 @@ export const updateMediaItem = mutation({
       });
     }
 
-    // Auto-update subcategory counts if they changed
     if (
       updates.subcategoryIds &&
       updates.subcategoryIds !== item.subcategoryIds
     ) {
       const oldSubs = new Set(item.subcategoryIds);
       const newSubs = new Set(updates.subcategoryIds);
-
       const removedSubs = [...oldSubs].filter((sid) => !newSubs.has(sid));
       const addedSubs = [...newSubs].filter((sid) => !oldSubs.has(sid));
 
@@ -402,10 +223,8 @@ export const updateMediaItem = mutation({
         generateSortTitle(updates.title);
     }
     if (updates.rating !== undefined) validateRating(updates.rating as number);
-
     await ctx.db.patch(id, updates);
 
-    // Sync Junction Table cleanly
     const existingJunctions = await ctx.db
       .query("itemSubcategories")
       .withIndex("by_mediaItem", (q) => q.eq("mediaItemId", id))
@@ -446,13 +265,9 @@ export const deleteMediaItem = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-
     const item = await ctx.db.get(args.id);
     if (!item || item.userId !== userId) throw new Error("Item not found");
-
-    // Skip if already soft-deleted
     if (item.deletedAt !== undefined) return;
-
     const category = await ctx.db.get(item.categoryId);
 
     if (category) {
@@ -461,7 +276,6 @@ export const deleteMediaItem = mutation({
       });
     }
 
-    // Auto-decrement subcategory counts
     for (const subId of item.subcategoryIds) {
       const sub = await ctx.db.get(subId);
       if (sub) {
@@ -471,15 +285,12 @@ export const deleteMediaItem = mutation({
       }
     }
 
-    // Soft delete: keep the item in the DB but mark it as deleted
     const now = Date.now();
     await ctx.db.patch(args.id, { deletedAt: now });
-
     const junctions = await ctx.db
       .query("itemSubcategories")
       .withIndex("by_mediaItem", (q) => q.eq("mediaItemId", args.id))
       .collect();
-
     for (const j of junctions) {
       await ctx.db.patch(j._id, { deletedAt: now });
     }

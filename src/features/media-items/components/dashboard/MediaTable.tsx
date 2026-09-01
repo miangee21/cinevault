@@ -38,7 +38,7 @@ export function MediaTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const { widths, resizeColumn } = useColumnWidths();
   const { showDeleteButton, viewMode, setViewMode } = useDashboardPreferences();
-  const itemCounts = useQuery(api.mediaItems.getMediaItemCounts);
+  const itemCounts = useQuery(api.mediaItemQueries.getMediaItemCounts);
   const pageSizeNumber = Number(pageSize);
 
   const {

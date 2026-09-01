@@ -170,7 +170,7 @@ export function TypeTabs({
   onSubcategoryChange,
 }: TypeTabsProps) {
   const { categories, isLoading } = useCategories();
-  const itemCounts = useQuery(api.mediaItems.getMediaItemCounts);
+  const itemCounts = useQuery(api.mediaItemQueries.getMediaItemCounts);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);

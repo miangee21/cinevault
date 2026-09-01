@@ -5,5 +5,5 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 
 export function useDeleteMediaItem() {
-  return useMutation(api.mediaItems.deleteMediaItem);
+  return useMutation(api.mediaItemMutations.deleteMediaItem);
 }
