@@ -9,7 +9,6 @@ export interface Category {
   name: string;
   icon: string;
   itemCount?: number;
-  deletedAt?: number;
 }
 
 export interface Subcategory {
@@ -20,7 +19,6 @@ export interface Subcategory {
   name: string;
   icon: string;
   itemCount?: number;
-  deletedAt?: number;
 }
 
 export const categoryFormSchema = z.object({

@@ -13,7 +13,7 @@ export default defineSchema({
     name: v.string(),
     icon: v.string(),
     itemCount: v.number(),
-    deletedAt: v.optional(v.number()), // For Soft Delete
+    trashedItemCount: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
   // --- Subcategories: e.g. "Punjabi", "Anime" ---
@@ -22,8 +22,8 @@ export default defineSchema({
     categoryId: v.id("categories"),
     name: v.string(),
     icon: v.string(),
-    itemCount: v.optional(v.number()), // Future proofing 0-load count
-    deletedAt: v.optional(v.number()), // For Soft Delete
+    itemCount: v.optional(v.number()),
+    trashedItemCount: v.optional(v.number()),
   })
     .index("by_category", ["categoryId"])
     .index("by_user", ["userId"]),

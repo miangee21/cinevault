@@ -19,6 +19,7 @@ interface TypeTabsProps {
   onChange: (value: Id<"categories"> | "all") => void;
   subcategoryValue: Id<"subcategories"> | "all";
   onSubcategoryChange: (value: Id<"subcategories"> | "all") => void;
+  isTrashView?: boolean;
 }
 
 function CategoryTabNode({
@@ -27,12 +28,14 @@ function CategoryTabNode({
   onClick,
   subcategoryValue,
   onSubcategoryChange,
+  isTrashView,
 }: {
   category: { id: Id<"categories">; name: string; count?: number };
   isActive: boolean;
   onClick: () => void;
   subcategoryValue: Id<"subcategories"> | "all";
   onSubcategoryChange: (value: Id<"subcategories"> | "all") => void;
+  isTrashView?: boolean;
 }) {
   const subcategories =
     useQuery(api.subcategories.getSubcategories, { categoryId: category.id }) ||
@@ -150,7 +153,9 @@ function CategoryTabNode({
                   >
                     <span className="truncate">{sub.name}</span>
                     <span className="text-[10px] bg-[hsl(var(--foreground)/0.06)] px-1.5 py-0.5 rounded-full text-muted-foreground shrink-0">
-                      {sub.itemCount || 0}
+                      {isTrashView
+                        ? sub.trashedItemCount || 0
+                        : sub.itemCount || 0}
                     </span>
                   </button>
                 ))}
@@ -168,9 +173,14 @@ export function TypeTabs({
   onChange,
   subcategoryValue,
   onSubcategoryChange,
+  isTrashView,
 }: TypeTabsProps) {
   const { categories, isLoading } = useCategories();
-  const itemCounts = useQuery(api.mediaItemQueries.getMediaItemCounts);
+  const itemCounts = useQuery(
+    isTrashView
+      ? api.trash.getTrashedMediaItemCounts
+      : api.mediaItemQueries.getMediaItemCounts,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -278,6 +288,7 @@ export function TypeTabs({
               onClick={() => onChange(tab.id)}
               subcategoryValue={subcategoryValue}
               onSubcategoryChange={onSubcategoryChange}
+              isTrashView={isTrashView}
             />
           );
         })}

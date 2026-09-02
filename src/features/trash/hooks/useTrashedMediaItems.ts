@@ -1,33 +1,30 @@
-//src/features/media-items/hooks/useMediaItems.ts
+//src/features/trash/hooks/useTrashedMediaItems.ts
 "use client";
 
 import { useEffect } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { type Id } from "@convex/_generated/dataModel";
-import { type SortOption } from "../utils/sortMediaItems";
 
-export function useMediaItems(
+export function useTrashedMediaItems(
   categoryId: Id<"categories"> | undefined,
   subcategoryId: Id<"subcategories"> | undefined,
   searchTerm: string,
-  sortOption: SortOption,
   pageSize: number,
   currentPage: number,
 ) {
-  //Use usePaginatedQuery to natively handle cursors & accumulation
+  // 1. Knot-style: Native accumulated pagination for the trash
   const { results, status, loadMore } = usePaginatedQuery(
-    api.mediaItemQueries.getMediaItemsPaginated,
+    api.trash.getTrashedMediaItemsPaginated,
     {
       categoryId,
       subcategoryId,
       searchTerm: searchTerm || undefined,
-      sortOption,
     },
     { initialNumItems: pageSize },
   );
 
-  // 2. Automatically load more items into memory when the user navigates to next pages
+  // 2. Fetch more from DB only if the user explicitly visits deeper pages
   const requiredItems = currentPage * pageSize;
   useEffect(() => {
     if (status === "CanLoadMore" && results.length < requiredItems) {
@@ -35,6 +32,7 @@ export function useMediaItems(
     }
   }, [currentPage, pageSize, status, results.length, loadMore, requiredItems]);
 
+  // 3. Client-side slicing for buttery smooth auto-sliding on restore/delete
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const pageItems = results.slice(startIndex, endIndex);

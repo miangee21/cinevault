@@ -6,7 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2, Trash2, Tags } from "lucide-react";
-
+import { ConvexError } from "convex/values";
 import {
   Dialog,
   DialogContent,
@@ -95,16 +95,12 @@ export function SubcategoryFormDialog({
       }
       setOpen(false);
     } catch (error) {
-      let errorMessage = "Something went wrong";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        if (errorMessage.includes("Uncaught Error: ")) {
-          errorMessage = errorMessage
-            .split("Uncaught Error: ")[1]
-            .split(" at ")[0]
-            .trim();
-        }
-      }
+      const errorMessage =
+        error instanceof ConvexError
+          ? (error.data as string)
+          : error instanceof Error
+            ? error.message
+            : "Something went wrong";
       toast.error(errorMessage);
     }
   };
@@ -113,13 +109,17 @@ export function SubcategoryFormDialog({
     if (!subcategory || affectedCount > 0) return;
     try {
       await deleteSubcategory({ id: subcategory._id });
-      toast.success("Subcategory moved to Trash.");
+      toast.success("Subcategory deleted permanently.");
       setDeleteAlertOpen(false);
       setOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn't delete subcategory",
-      );
+      const errorMessage =
+        error instanceof ConvexError
+          ? (error.data as string)
+          : error instanceof Error
+            ? error.message
+            : "Couldn't delete subcategory";
+      toast.error(errorMessage);
     }
   };
 
@@ -233,7 +233,7 @@ export function SubcategoryFormDialog({
                     Please remove it from those items before deleting.
                   </span>
                 ) : (
-                  "This subcategory is unused and can be safely deleted. It will be moved to the Trash."
+                  "This subcategory is unused and can be safely deleted. This action cannot be undone."
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -244,7 +244,7 @@ export function SubcategoryFormDialog({
                 disabled={affectedCount > 0}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
               >
-                Move to Trash
+                Delete Permanently
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

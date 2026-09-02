@@ -16,6 +16,7 @@ import type * as mediaItemMutations from "../mediaItemMutations.js";
 import type * as mediaItemQueries from "../mediaItemQueries.js";
 import type * as storage from "../storage.js";
 import type * as subcategories from "../subcategories.js";
+import type * as trash from "../trash.js";
 import type * as users from "../users.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   mediaItemQueries: typeof mediaItemQueries;
   storage: typeof storage;
   subcategories: typeof subcategories;
+  trash: typeof trash;
   users: typeof users;
 }>;
 

@@ -1,5 +1,5 @@
 // convex/categories.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -12,7 +12,6 @@ export const getCategories = query({
     const categories = await ctx.db
       .query("categories")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("deletedAt"), undefined)) // Skip trashed items
       .collect();
 
     // Professional Natural Sort (1, 2, 10, A, B, Z)
@@ -41,7 +40,6 @@ export const createCategory = mutation({
     const existing = await ctx.db
       .query("categories")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
     if (existing.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
@@ -72,6 +70,20 @@ export const updateCategory = mutation({
       throw new Error("Category not found");
     }
 
+    // 0-Load Guard: Strictly check if ANY item (active or trashed) exists!
+    const hasItems = await ctx.db
+      .query("mediaItems")
+      .withIndex("by_user_and_category", (q) =>
+        q.eq("userId", userId).eq("categoryId", args.id),
+      )
+      .first();
+
+    if (hasItems) {
+      throw new Error(
+        "Cannot delete: This category is linked to items (active or in trash). Please remove them first.",
+      );
+    }
+
     const name = args.name.trim();
     if (name.length < 1) throw new Error("Category name is required");
 
@@ -79,7 +91,6 @@ export const updateCategory = mutation({
     const existing = await ctx.db
       .query("categories")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
     if (
@@ -123,24 +134,22 @@ export const deleteCategory = mutation({
       .first();
 
     if (hasItems) {
-      throw new Error(
-        "Cannot delete: This category has items in it. Please reassign or delete them first.",
+      throw new ConvexError(
+        "This category has items in it. Please reassign or delete them first.",
       );
     }
 
-    const now = Date.now();
-
-    // Soft delete category
-    await ctx.db.patch(args.id, { deletedAt: now });
-
-    // Cascade soft delete to subcategories
+    // Cascade hard delete to subcategories
     const subcategories = await ctx.db
       .query("subcategories")
       .withIndex("by_category", (q) => q.eq("categoryId", args.id))
       .collect();
 
-    await Promise.all(
-      subcategories.map((sub) => ctx.db.patch(sub._id, { deletedAt: now })),
-    );
+    for (const sub of subcategories) {
+      await ctx.db.delete(sub._id);
+    }
+
+    // Hard delete category directly
+    await ctx.db.delete(args.id);
   },
 });

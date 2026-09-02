@@ -57,6 +57,11 @@ export function MediaTable() {
   const isSearching = searchTerm.trim().length > 0;
   const isLoadingFirstPage = isLoading && currentPage === 1;
 
+  // Professional Auto-Heal: Render-phase state update (prevents cascading renders)
+  if (!isLoading && pageItems.length === 0 && currentPage > 1) {
+    setCurrentPage(currentPage - 1);
+  }
+
   const [prevFilters, setPrevFilters] = useState({
     categoryFilter,
     subcategoryFilter,

@@ -1,5 +1,5 @@
 // convex/subcategories.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -12,12 +12,7 @@ export const getSubcategories = query({
     return await ctx.db
       .query("subcategories")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("deletedAt"), undefined), // Skip trashed items
-        ),
-      )
+      .filter((q) => q.eq(q.field("userId"), userId))
       .collect();
   },
 });
@@ -44,7 +39,6 @@ export const createSubcategory = mutation({
     const existing = await ctx.db
       .query("subcategories")
       .withIndex("by_category", (q) => q.eq("categoryId", args.categoryId))
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
     if (existing.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
@@ -85,7 +79,6 @@ export const updateSubcategory = mutation({
       .withIndex("by_category", (q) =>
         q.eq("categoryId", subcategory.categoryId),
       )
-      .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
     if (
@@ -120,14 +113,21 @@ export const deleteSubcategory = mutation({
       throw new Error("Subcategory not found");
     }
 
-    // 0-Load Guard: Strictly check schema count
-    if (subcategory.itemCount && subcategory.itemCount > 0) {
-      throw new Error(
-        "Cannot delete: This subcategory is linked to items. Please remove it from those items first.",
+    // 0-Load Guard: Strictly check if ANY item (active or trashed) uses this subcategory
+    const hasItems = await ctx.db
+      .query("itemSubcategories")
+      .withIndex("by_user_subcategory_and_sortTitle", (q) =>
+        q.eq("userId", userId).eq("subcategoryId", args.id),
+      )
+      .first();
+
+    if (hasItems) {
+      throw new ConvexError(
+        "This subcategory is linked to items (active or in trash). Please remove them first.",
       );
     }
 
-    // Soft delete subcategory
-    await ctx.db.patch(args.id, { deletedAt: Date.now() });
+    // Hard delete subcategory
+    await ctx.db.delete(args.id);
   },
 });

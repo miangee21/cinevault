@@ -268,11 +268,12 @@ export const deleteMediaItem = mutation({
     const item = await ctx.db.get(args.id);
     if (!item || item.userId !== userId) throw new Error("Item not found");
     if (item.deletedAt !== undefined) return;
-    const category = await ctx.db.get(item.categoryId);
 
+    const category = await ctx.db.get(item.categoryId);
     if (category) {
       await ctx.db.patch(item.categoryId, {
         itemCount: Math.max(0, (category.itemCount ?? 0) - 1),
+        trashedItemCount: (category.trashedItemCount ?? 0) + 1,
       });
     }
 
@@ -281,6 +282,7 @@ export const deleteMediaItem = mutation({
       if (sub) {
         await ctx.db.patch(subId, {
           itemCount: Math.max(0, (sub.itemCount ?? 0) - 1),
+          trashedItemCount: (sub.trashedItemCount ?? 0) + 1,
         });
       }
     }

@@ -6,6 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2, Trash2, FolderTree } from "lucide-react";
+import { ConvexError } from "convex/values";
 
 import {
   Dialog,
@@ -92,16 +93,12 @@ export function CategoryFormDialog({
       }
       setOpen(false);
     } catch (error) {
-      let errorMessage = "Something went wrong";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        if (errorMessage.includes("Uncaught Error: ")) {
-          errorMessage = errorMessage
-            .split("Uncaught Error: ")[1]
-            .split(" at ")[0]
-            .trim();
-        }
-      }
+      const errorMessage =
+        error instanceof ConvexError
+          ? (error.data as string)
+          : error instanceof Error
+            ? error.message
+            : "Something went wrong";
       toast.error(errorMessage);
     }
   };
@@ -110,13 +107,17 @@ export function CategoryFormDialog({
     if (!category || affectedCount > 0) return;
     try {
       await deleteCategory({ id: category._id });
-      toast.success("Category moved to Trash.");
+      toast.success("Category deleted permanently.");
       setDeleteAlertOpen(false);
       setOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn't delete category",
-      );
+      const errorMessage =
+        error instanceof ConvexError
+          ? (error.data as string)
+          : error instanceof Error
+            ? error.message
+            : "Couldn't delete category";
+      toast.error(errorMessage);
     }
   };
 
@@ -230,7 +231,7 @@ export function CategoryFormDialog({
                     reassign them to another category before deleting.
                   </span>
                 ) : (
-                  "This category is empty and can be safely deleted. It will be moved to the Trash."
+                  "This category is empty and can be safely deleted. This action cannot be undone."
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -241,7 +242,7 @@ export function CategoryFormDialog({
                 disabled={affectedCount > 0}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
               >
-                Move to Trash
+                Delete Permanently
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
